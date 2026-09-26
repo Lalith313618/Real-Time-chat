@@ -1,0 +1,85 @@
+<div class="dashboard-container">
+  <div *ngIf="authService.currentUser() as user" class="glass-card user-hero-card">
+    <div class="user-hero-header">
+      <div *ngIf="!user.profileImage" class="user-avatar-large">
+        {{ user.name.charAt(0).toUpperCase() }}
+      </div>
+      <img *ngIf="user.profileImage" [src]="user.profileImage" [alt]="user.name" class="user-avatar-large img" />
+      <div class="user-hero-details">
+        <div class="user-hero-tag">
+          <span class="badge badge-success">
+            <span class="status-dot online"></span>
+            Active Session
+          </span>
+        </div>
+        <h2 class="user-hero-name">Welcome back, {{ user.name }}!</h2>
+        <p class="user-hero-email">{{ user.email }}</p>
+      </div>
+      <div class="user-hero-actions">
+        <a routerLink="/chat" class="btn btn-primary">
+          <img src="/icons/chat.svg" class="icon-img-sm" alt="Chat" />
+          <span>Open Messages</span>
+        </a>
+        <a routerLink="/users/search" class="btn btn-secondary">
+          <img src="/icons/search.svg" class="icon-img-sm" alt="Find People" />
+          <span>Find People</span>
+        </a>
+        <a routerLink="/users/profile" class="btn btn-secondary">
+          <img src="/icons/user.svg" class="icon-img-sm" alt="Profile" />
+          <span>My Profile</span>
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <div *ngIf="!authService.isLoggedIn()" class="hero-banner">
+    <span class="pill-tag">Next-Gen Real-Time Messaging</span>
+    <h2 class="hero-heading">Connect Instantly with PulseChat</h2>
+    <p class="hero-desc">
+      Experience lightning-fast messaging, group collaboration, and rich media sharing powered by modern WebSockets and progressive web technologies.
+    </p>
+    <div class="hero-cta-group">
+      <a routerLink="/auth/register" class="btn btn-primary">
+        <img src="/icons/user.svg" class="icon-img-sm" alt="Register" />
+        <span>Get Started Free</span>
+      </a>
+      <a routerLink="/auth/login" class="btn btn-secondary">
+        <img src="/icons/chat.svg" class="icon-img-sm" alt="Sign In" />
+        <span>Sign In</span>
+      </a>
+    </div>
+  </div>
+
+  <div class="features-showcase-section">
+    <div class="section-title-wrap">
+      <h3 class="section-title">Platform Features</h3>
+      <p class="section-subtext">Engineered for seamless, high-performance communication</p>
+    </div>
+
+    <div class="features-grid">
+      <div class="glass-card feature-card">
+        <div class="feature-icon icon-messaging">
+          <img src="/icons/chat.svg" class="icon-img-lg" alt="Messaging" />
+        </div>
+        <h4>Instant Messaging</h4>
+        <p>Live 1-on-1 and Group chats with real-time typing indicators, read receipts, and last seen presence.</p>
+      </div>
+
+      <div class="glass-card feature-card">
+        <div class="feature-icon icon-groups">
+          <img src="/icons/group.svg" class="icon-img-lg" alt="Groups" />
+        </div>
+        <h4>Group Collaboration</h4>
+        <p>Create multi-user rooms, manage members, assign administrators, and collaborate with your entire team.</p>
+      </div>
+
+      <div class="glass-card feature-card">
+        <div class="feature-icon icon-media">
+          <img src="/icons/file.svg" class="icon-img-lg" alt="Media" />
+        </div>
+        <h4>Rich Media & Files</h4>
+        <p>Share photos, videos, and documents seamlessly with upload progress bars and full-screen image lightbox.</p>
+      </div>
+    </div>
+  </div>
+</div>

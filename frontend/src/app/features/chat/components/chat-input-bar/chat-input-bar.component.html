@@ -1,0 +1,92 @@
+<footer class="chat-composer-wrapper">
+  <div *ngIf="replyingTo as rep" class="composer-action-banner">
+    <div class="action-banner-text">
+      <span class="action-label">Replying to {{ getSenderName(rep) }}:</span>
+      <span class="action-preview">{{ rep.content }}</span>
+    </div>
+    <button (click)="cancelReply.emit()" class="cancel-banner-btn" aria-label="Cancel reply">
+      <img src="/icons/close.svg" class="icon-img-sm" alt="Cancel" />
+    </button>
+  </div>
+
+  <div *ngIf="editingMessage as editMsg" class="composer-action-banner edit-mode">
+    <div class="action-banner-text">
+      <span class="action-label">Editing Message:</span>
+      <span class="action-preview">{{ editMsg.content }}</span>
+    </div>
+    <button (click)="cancelEdit.emit()" class="cancel-banner-btn" aria-label="Cancel edit">
+      <img src="/icons/close.svg" class="icon-img-sm" alt="Cancel" />
+    </button>
+  </div>
+
+  <div *ngIf="selectedFile as file" class="composer-action-banner attachment-banner">
+    <div class="attachment-preview-col">
+      <img *ngIf="filePreviewUrl" [src]="filePreviewUrl" alt="Upload preview" class="attachment-thumb" />
+      <div *ngIf="!filePreviewUrl" class="attachment-file-icon">
+        <img src="/icons/file.svg" class="icon-img" alt="File" />
+      </div>
+      <div class="attachment-text-wrap">
+        <span class="attachment-name" [title]="file.name">{{ file.name }}</span>
+        <span class="attachment-size">{{ formatFileSize(file.size) }}</span>
+      </div>
+    </div>
+
+    <div class="attachment-status-col">
+      <div *ngIf="isUploading" class="upload-progress-wrap">
+        <div class="progress-bar-track">
+          <div class="progress-bar-fill" [style.width.%]="uploadProgress"></div>
+        </div>
+        <span class="progress-text">{{ uploadProgress }}%</span>
+      </div>
+      <span *ngIf="!isUploading && uploadedFileData" class="upload-done-badge">
+        <img src="/icons/check.svg" class="icon-img-sm" alt="Ready" />
+        Ready
+      </span>
+      <span *ngIf="uploadError" class="upload-error-badge">{{ uploadError }}</span>
+
+      <button type="button" (click)="cancelAttachment.emit()" class="cancel-banner-btn" aria-label="Remove attachment" title="Remove attachment">
+        <img src="/icons/close.svg" class="icon-img-sm" alt="Remove" />
+      </button>
+    </div>
+  </div>
+
+  <input
+    #fileInput
+    type="file"
+    (change)="onFileSelected($event)"
+    style="display: none;"
+    accept="image/*,audio/*,video/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,.zip,.rar"
+  />
+
+  <form (ngSubmit)="onSendMessage()" class="composer-form">
+    <button
+      type="button"
+      (click)="triggerFileInput()"
+      class="btn-composer-attach"
+      title="Attach photo or document"
+      [disabled]="isUploading"
+    >
+      <img src="/icons/attach.svg" class="icon-img" alt="Attach" />
+    </button>
+
+    <input
+      type="text"
+      [ngModel]="messageInput"
+      (ngModelChange)="onInputChange($event)"
+      name="messageText"
+      [placeholder]="uploadedFileData ? 'Add a caption (optional)...' : 'Type a message (Press Enter to send)...'"
+      class="composer-input"
+      autocomplete="off"
+    />
+
+    <button
+      type="submit"
+      class="btn btn-primary send-btn"
+      [disabled]="(!messageInput.trim() && !uploadedFileData) || isSending || isUploading"
+      title="Send message"
+    >
+      <span *ngIf="isSending || isUploading" class="loader-spinner"></span>
+      <img *ngIf="!isSending && !isUploading" src="/icons/send.svg" class="icon-img" alt="Send" />
+    </button>
+  </form>
+</footer>

@@ -1,0 +1,122 @@
+.global-toast-container {
+  position: fixed;
+  top: 5.75rem;
+  right: 2rem;
+  z-index: 9999;
+  animation: toastSlideIn 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes toastSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-20px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.toast-card {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.85rem 1.25rem;
+  background: var(--bg-card, #FFFDF8);
+  border: 1px solid var(--border-subtle, #DFD5BF);
+  border-left: 4px solid var(--primary, #C57D3A);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 12px 30px rgba(43, 35, 23, 0.12);
+  cursor: pointer;
+  max-width: 380px;
+  transition: all var(--transition-fast);
+}
+
+.toast-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 16px 36px rgba(43, 35, 23, 0.16);
+  border-color: var(--primary);
+}
+
+.toast-avatar {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.toast-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.toast-avatar.placeholder-avatar {
+  background: var(--primary-gradient);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #2B2317;
+}
+
+.toast-avatar.placeholder-avatar svg {
+  width: 20px;
+  height: 20px;
+}
+
+.toast-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.toast-title {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 0.2rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.toast-message {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  line-height: 1.35;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.toast-close-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  font-size: 1.25rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0.2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+  transition: all var(--transition-fast);
+}
+
+.toast-close-btn:hover {
+  color: var(--text-primary);
+  background: var(--bg-tertiary);
+}
+
+@media (max-width: 600px) {
+  .global-toast-container {
+    top: 1rem;
+    right: 1rem;
+    left: 1rem;
+  }
+  .toast-card {
+    max-width: 100%;
+  }
+}

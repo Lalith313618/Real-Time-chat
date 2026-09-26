@@ -1,0 +1,149 @@
+<div class="chat-layout glass-card">
+  <div *ngIf="!networkService.isOnline()" class="offline-banner">
+    <div class="offline-banner-content">
+      <div class="offline-icon-wrap">
+        <img src="/icons/info.svg" class="icon-img" alt="Offline" />
+      </div>
+      <div class="offline-text">
+        <strong>You are offline.</strong>
+        <span>Local chat history is accessible. New messages will synchronize when your connection returns.</span>
+      </div>
+      <button (click)="networkService.retryConnection()" class="btn btn-sm btn-offline-retry">
+        Retry
+      </button>
+    </div>
+  </div>
+
+  <div *ngIf="networkService.showReconnectedNotice()" class="reconnected-banner">
+    <img src="/icons/check.svg" class="icon-img-sm" alt="Reconnected" />
+    <span>Connection restored! Messages and presence are live.</span>
+  </div>
+
+  <app-chat-sidebar
+    [conversations]="conversations()"
+    [activeConversation]="activeConversation()"
+    [conversationFilter]="conversationFilter()"
+    [isLoadingConversations]="isLoadingConversations()"
+    (selectConversation)="selectConversation($event)"
+    (filterChange)="conversationFilter.set($event)"
+    (openCreateGroup)="openCreateGroupModal()"
+  ></app-chat-sidebar>
+
+  <section
+    class="chat-main"
+    *ngIf="activeConversation() as activeConv; else noChatSelected"
+    [class.mobile-active]="activeConversation() !== null"
+    (touchstart)="onTouchStart($event)"
+    (touchend)="onTouchEnd($event)"
+  >
+    <app-chat-header
+      [activeConversation]="activeConv"
+      [typingIndicatorText]="typingIndicatorText()"
+      [isSearchOpen]="isSearchOpen()"
+      [isGroupInfoOpen]="isGroupInfoOpen()"
+      [lastSeenMap]="lastSeenMap()"
+      (back)="deselectConversation()"
+      (openGroupInfo)="openGroupInfo()"
+      (toggleSearch)="toggleSearch()"
+      (clearChat)="clearChatHistory()"
+    ></app-chat-header>
+
+    <app-search-drawer
+      [isOpen]="isSearchOpen()"
+      [searchQuery]="searchQuery()"
+      [searchResults]="searchResults()"
+      [currentResultIndex]="currentResultIndex()"
+      [isSearching]="isSearching()"
+      (searchChange)="onSearchChange($event)"
+      (clear)="clearSearch()"
+      (prev)="prevSearchResult()"
+      (next)="nextSearchResult()"
+      (close)="toggleSearch()"
+    ></app-search-drawer>
+
+    <app-chat-message-feed
+      #messageFeed
+      [messages]="messages()"
+      [activeConversation]="activeConv"
+      [currentUserId]="authService.currentUser()?._id"
+      [isLoadingMessages]="isLoadingMessages()"
+      [typingIndicatorText]="typingIndicatorText()"
+      [activeAudioMessageId]="activeAudioMessageId()"
+      [audioCurrentTimeMap]="audioCurrentTimeMap()"
+      [audioDurationMap]="audioDurationMap()"
+      (openLightbox)="openLightbox($event)"
+      (toggleAudioPlayback)="toggleAudioPlayback($event)"
+      (seekAudio)="seekAudio($event.message, $event.event, $event.progressBar)"
+      (startReply)="startReply($event)"
+      (startEdit)="startEdit($event)"
+      (deleteMessage)="deleteMessage($event)"
+    ></app-chat-message-feed>
+
+    <app-chat-input-bar
+      [replyingTo]="replyingTo()"
+      [editingMessage]="editingMessage()"
+      [selectedFile]="selectedFile()"
+      [filePreviewUrl]="filePreviewUrl()"
+      [uploadProgress]="uploadProgress()"
+      [isUploading]="isUploading()"
+      [uploadedFileData]="uploadedFileData()"
+      [uploadError]="uploadError()"
+      [messageInput]="messageInput()"
+      [isSending]="isSending()"
+      (cancelReply)="cancelReply()"
+      (cancelEdit)="cancelEdit()"
+      (cancelAttachment)="cancelAttachment()"
+      (fileSelected)="onFileSelected($event)"
+      (messageInputChange)="onInputChange($event)"
+      (sendMessage)="sendMessage()"
+    ></app-chat-input-bar>
+  </section>
+
+  <ng-template #noChatSelected>
+    <div class="chat-placeholder mobile-hidden">
+      <div class="placeholder-icon">
+        <img src="/icons/chat.svg" class="icon-img-lg" alt="Chat" />
+      </div>
+      <h3 class="placeholder-title">Select a Conversation</h3>
+      <p class="placeholder-desc">Choose a chat from the left sidebar or start a new conversation to start messaging in real-time.</p>
+      <a routerLink="/users/search" class="btn btn-primary">
+        <img src="/icons/search.svg" class="icon-img-sm" alt="Explore" />
+        <span>Explore Users Directory</span>
+      </a>
+    </div>
+  </ng-template>
+</div>
+
+<app-create-group-modal
+  [isOpen]="isCreateGroupOpen()"
+  [newGroupName]="newGroupName()"
+  [selectedGroupMembers]="selectedGroupMembers()"
+  [usersList]="allUsersList()"
+  [isCreatingGroup]="isCreatingGroup()"
+  [createGroupError]="createGroupError()"
+  [userFilter]="userFilterInGroupModal()"
+  (nameChange)="newGroupName.set($event)"
+  (filterChange)="userFilterInGroupModal.set($event)"
+  (memberToggle)="toggleGroupMemberSelection($event)"
+  (close)="closeCreateGroupModal()"
+  (submit)="submitCreateGroup()"
+></app-create-group-modal>
+
+<app-group-info-drawer
+  [isOpen]="isGroupInfoOpen()"
+  [conversation]="activeConversation()"
+  [groupActionMessage]="groupActionMessage()"
+  [groupActionLoading]="groupActionLoading()"
+  [availableUsers]="availableUsersToAdd()"
+  (close)="closeGroupInfo()"
+  (rename)="saveGroupNameDirect($event)"
+  (addMember)="addMemberToGroup($event)"
+  (toggleAdmin)="toggleAdmin($event)"
+  (removeMember)="removeMember($event)"
+  (leaveGroup)="leaveCurrentGroup()"
+></app-group-info-drawer>
+
+<app-image-lightbox
+  [imageUrl]="previewLightboxImage()"
+  (close)="closeLightbox()"
+></app-image-lightbox>

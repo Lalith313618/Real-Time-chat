@@ -1,0 +1,205 @@
+/* ==========================================================================
+   Chat Component Root Layout - Siltstone Palette
+   Palette: #CBBD93 (Siltstone Sand), #FFF5B8 (Buttercream), #FFB16E (Soft Apricot), #CCA25A (Golden Sandstone)
+   ========================================================================== */
+
+.chat-layout {
+  height: calc(100vh - 126px);
+  min-height: 520px;
+  display: grid;
+  grid-template-columns: 360px 1fr;
+  grid-template-rows: 100%;
+  overflow: hidden;
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-secondary);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 8px 30px rgba(43, 35, 23, 0.08);
+  position: relative;
+}
+
+/* Offline & Network Notification Banners */
+.offline-banner {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  background: #FAF0E8;
+  border-bottom: 1px solid rgba(197, 86, 58, 0.25);
+  padding: 0.65rem 1.25rem;
+  z-index: 100;
+  animation: slideDown 0.2s ease-out;
+}
+
+.offline-banner-content {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.offline-icon-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--status-busy);
+  flex-shrink: 0;
+}
+
+.offline-text {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  font-size: 0.85rem;
+  color: var(--status-busy);
+}
+
+.offline-text strong {
+  font-weight: 700;
+}
+
+.offline-text span {
+  font-size: 0.78rem;
+  opacity: 0.9;
+}
+
+.btn-offline-retry {
+  background: var(--status-busy);
+  color: #FFFDF8;
+  border: none;
+  padding: 0.35rem 0.85rem;
+  border-radius: var(--radius-sm);
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.btn-offline-retry:hover {
+  background: #A84428;
+  transform: translateY(-1px);
+}
+
+.reconnected-banner {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  background: #EFF6F0;
+  border-bottom: 1px solid rgba(91, 155, 104, 0.25);
+  color: var(--status-online);
+  padding: 0.55rem 1.25rem;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+  animation: slideDown 0.2s ease-out;
+}
+
+@keyframes slideDown {
+  from {
+    transform: translateY(-100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+/* Main Chat Pane */
+.chat-main {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+  background: var(--bg-primary);
+  position: relative;
+}
+
+/* No Chat Selected Placeholder */
+.chat-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 3rem 2rem;
+  height: 100%;
+  background: var(--bg-primary);
+}
+
+.placeholder-icon {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: #FFF5B8;
+  color: var(--primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 1.5rem;
+  box-shadow: 0 4px 16px rgba(204, 162, 90, 0.25);
+}
+
+.placeholder-icon svg {
+  width: 40px;
+  height: 40px;
+}
+
+.placeholder-title {
+  font-size: 1.6rem;
+  font-weight: 800;
+  margin-bottom: 0.5rem;
+  color: var(--text-primary);
+  font-family: var(--font-heading);
+}
+
+.placeholder-desc {
+  font-size: 0.95rem;
+  color: var(--text-secondary);
+  max-width: 420px;
+  line-height: 1.5;
+  margin-bottom: 1.75rem;
+}
+
+/* Responsive adjustments */
+@media (max-width: 900px) {
+  .chat-layout {
+    grid-template-columns: 300px 1fr;
+    height: calc(100vh - 120px);
+  }
+}
+
+@media (max-width: 768px) {
+  .chat-layout {
+    grid-template-columns: 1fr;
+    height: calc(100vh - 140px);
+    border-radius: 0;
+    border: none;
+    box-shadow: none;
+  }
+
+  .mobile-hidden {
+    display: none !important;
+  }
+
+  .chat-main {
+    display: none;
+  }
+
+  .chat-main.mobile-active {
+    display: flex;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 64px;
+    z-index: 500;
+    height: auto;
+  }
+}

@@ -1,0 +1,14 @@
+<div *ngIf="imageUrl" class="lightbox-backdrop" (click)="onClose()">
+  <div class="lightbox-content" (click)="$event.stopPropagation()">
+    <img [src]="imageUrl" alt="Enlarged view" class="lightbox-img" />
+    <div class="lightbox-controls">
+      <a [href]="imageUrl" target="_blank" [download]="'image_' + imageUrl" class="btn btn-secondary btn-sm" title="Download original">
+        <img src="/icons/download.svg" class="icon-img-sm" alt="Download" />
+        <span>Download</span>
+      </a>
+      <button (click)="onClose()" class="btn btn-secondary btn-sm" title="Close">
+        &times; Close
+      </button>
+    </div>
+  </div>
+</div>

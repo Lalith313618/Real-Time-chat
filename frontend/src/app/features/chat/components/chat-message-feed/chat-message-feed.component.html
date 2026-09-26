@@ -1,0 +1,182 @@
+<div class="messages-feed" #messagesContainer>
+  <div *ngIf="isLoadingMessages" class="loading-state">
+    <span class="loader-spinner"></span>
+    <span>Loading messages...</span>
+  </div>
+
+  <div *ngIf="!isLoadingMessages && messages.length === 0" class="no-messages-notice">
+    <div class="empty-icon-sm">
+      <img src="/icons/chat.svg" class="icon-img-lg" alt="Chat" />
+    </div>
+    <h4>No messages yet</h4>
+    <p>Send a message below to start the conversation!</p>
+  </div>
+
+  <div
+    *ngFor="let msg of messages"
+    [id]="'msg-' + msg._id"
+    class="message-row"
+    [class.outgoing]="isCurrentUserSender(msg)"
+    [class.incoming]="!isCurrentUserSender(msg)"
+  >
+    <div *ngIf="!isCurrentUserSender(msg)" class="msg-avatar-col">
+      <div *ngIf="!getSenderAvatar(msg)" class="msg-avatar-circle">
+        {{ getSenderName(msg).charAt(0).toUpperCase() }}
+      </div>
+      <img *ngIf="getSenderAvatar(msg)" [src]="getSenderAvatar(msg)" [alt]="getSenderName(msg)" class="msg-avatar-img" />
+    </div>
+
+    <div class="message-bubble-wrapper">
+      <span *ngIf="activeConversation?.isGroup && !isCurrentUserSender(msg)" class="group-msg-sender-tag">
+        {{ getSenderName(msg) }}
+      </span>
+
+      <div *ngIf="msg.replyTo && !msg.isDeleted" class="reply-reference-box">
+        <span class="reply-ref-author">Replying to message</span>
+        <p class="reply-ref-content">
+          {{ getReplyPreview(msg.replyTo) }}
+        </p>
+      </div>
+
+      <div *ngIf="msg.isDeleted" class="message-bubble deleted-bubble">
+        <span class="deleted-msg-icon">🚫</span>
+        <span class="deleted-msg-text">This message was deleted</span>
+        <span class="deleted-msg-time">{{ msg.createdAt ? (msg.createdAt | date:'shortTime') : '' }}</span>
+      </div>
+
+      <div
+        *ngIf="!msg.isDeleted"
+        class="message-bubble"
+        [class.has-media]="msg.messageType !== 'text' && msg.fileUrl"
+      >
+        <div
+          *ngIf="msg.messageType === 'image' && msg.fileUrl"
+          class="msg-image-attachment"
+          (click)="openLightbox.emit(msg.fileUrl)"
+          title="Click to view full image"
+        >
+          <img [src]="msg.fileUrl" [alt]="msg.fileName || 'Image attachment'" class="msg-attached-image" loading="lazy" />
+          <div class="image-overlay-hint">
+            <img src="/icons/search.svg" class="icon-img-sm" alt="Zoom" />
+          </div>
+        </div>
+
+        <div *ngIf="msg.messageType === 'file' && msg.fileUrl" class="msg-file-attachment">
+          <a [href]="msg.fileUrl" target="_blank" [download]="msg.fileName || 'download'" class="file-card-link">
+            <div class="file-icon-wrap">
+              <img src="/icons/file.svg" class="icon-img" alt="File" />
+            </div>
+            <div class="file-info-wrap">
+              <span class="file-card-name" [title]="msg.fileName">{{ msg.fileName || 'Attached Document' }}</span>
+              <span class="file-card-size">{{ formatFileSize(msg.fileSize) }}</span>
+            </div>
+            <div class="file-download-icon" title="Download">
+              <img src="/icons/download.svg" class="icon-img-sm" alt="Download" />
+            </div>
+          </a>
+        </div>
+
+        <div *ngIf="msg.messageType === 'audio' && msg.fileUrl" class="msg-audio-attachment">
+          <div class="custom-audio-card">
+            <button
+              type="button"
+              class="audio-play-btn"
+              (click)="toggleAudioPlayback.emit(msg)"
+              [attr.aria-label]="activeAudioMessageId === msg._id ? 'Pause voice message' : 'Play voice message'"
+              title="Play/Pause voice note"
+            >
+              <span>{{ activeAudioMessageId === msg._id ? '❚❚' : '▶' }}</span>
+            </button>
+
+            <div class="audio-waveform-wrap">
+              <div
+                #waveformBar
+                class="audio-waveform-track"
+                (click)="onSeekAudio(msg, $event, waveformBar)"
+                title="Click to seek"
+              >
+                <div class="waveform-bars-row">
+                  <span class="wf-bar" [class.active]="getAudioProgressPercent(msg) >= 4" style="height: 10px;"></span>
+                  <span class="wf-bar" [class.active]="getAudioProgressPercent(msg) >= 9" style="height: 18px;"></span>
+                  <span class="wf-bar" [class.active]="getAudioProgressPercent(msg) >= 13" style="height: 12px;"></span>
+                  <span class="wf-bar" [class.active]="getAudioProgressPercent(msg) >= 18" style="height: 24px;"></span>
+                  <span class="wf-bar" [class.active]="getAudioProgressPercent(msg) >= 22" style="height: 30px;"></span>
+                  <span class="wf-bar" [class.active]="getAudioProgressPercent(msg) >= 27" style="height: 16px;"></span>
+                  <span class="wf-bar" [class.active]="getAudioProgressPercent(msg) >= 31" style="height: 22px;"></span>
+                  <span class="wf-bar" [class.active]="getAudioProgressPercent(msg) >= 36" style="height: 34px;"></span>
+                  <span class="wf-bar" [class.active]="getAudioProgressPercent(msg) >= 40" style="height: 26px;"></span>
+                  <span class="wf-bar" [class.active]="getAudioProgressPercent(msg) >= 45" style="height: 14px;"></span>
+                  <span class="wf-bar" [class.active]="getAudioProgressPercent(msg) >= 50" style="height: 28px;"></span>
+                  <span class="wf-bar" [class.active]="getAudioProgressPercent(msg) >= 54" style="height: 32px;"></span>
+                  <span class="wf-bar" [class.active]="getAudioProgressPercent(msg) >= 59" style="height: 18px;"></span>
+                  <span class="wf-bar" [class.active]="getAudioProgressPercent(msg) >= 63" style="height: 24px;"></span>
+                  <span class="wf-bar" [class.active]="getAudioProgressPercent(msg) >= 68" style="height: 30px;"></span>
+                  <span class="wf-bar" [class.active]="getAudioProgressPercent(msg) >= 72" style="height: 20px;"></span>
+                  <span class="wf-bar" [class.active]="getAudioProgressPercent(msg) >= 77" style="height: 14px;"></span>
+                  <span class="wf-bar" [class.active]="getAudioProgressPercent(msg) >= 81" style="height: 28px;"></span>
+                  <span class="wf-bar" [class.active]="getAudioProgressPercent(msg) >= 86" style="height: 22px;"></span>
+                  <span class="wf-bar" [class.active]="getAudioProgressPercent(msg) >= 90" style="height: 16px;"></span>
+                  <span class="wf-bar" [class.active]="getAudioProgressPercent(msg) >= 95" style="height: 12px;"></span>
+                  <span class="wf-bar" [class.active]="getAudioProgressPercent(msg) >= 100" style="height: 8px;"></span>
+                </div>
+                <div class="audio-progress-line" [style.width.%]="getAudioProgressPercent(msg)"></div>
+              </div>
+
+              <div class="audio-meta-row">
+                <span class="audio-time">
+                  {{ formatDuration(activeAudioMessageId === msg._id ? getAudioCurrentTime(msg._id) : getAudioDuration(msg)) }}
+                </span>
+                <span class="audio-type-badge">
+                  Voice note
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <p *ngIf="msg.content" class="message-text">{{ msg.content }}</p>
+
+        <div class="bubble-meta">
+          <span *ngIf="msg.isEdited" class="edited-tag">(edited)</span>
+          <span class="message-time">{{ msg.createdAt ? (msg.createdAt | date:'shortTime') : '' }}</span>
+          <span
+            *ngIf="isCurrentUserSender(msg)"
+            class="msg-receipt-badge"
+            [class.receipt-sent]="getMessageReceipt(msg) === 'sent'"
+            [class.receipt-delivered]="getMessageReceipt(msg) === 'delivered'"
+            [class.receipt-read]="getMessageReceipt(msg) === 'read'"
+            [title]="getMessageReceipt(msg)"
+          >
+            <img *ngIf="getMessageReceipt(msg) === 'sent'" src="/icons/check.svg" class="icon-img-sm" alt="Sent" />
+            <img *ngIf="getMessageReceipt(msg) === 'delivered' || getMessageReceipt(msg) === 'read'" src="/icons/check-all.svg" class="icon-img-sm" alt="Delivered" />
+          </span>
+        </div>
+      </div>
+
+      <div *ngIf="!msg.isDeleted" class="message-hover-actions">
+        <button (click)="startReply.emit(msg)" class="hover-btn" title="Reply">
+          <img src="/icons/back.svg" class="icon-img-sm" alt="Reply" />
+        </button>
+
+        <button *ngIf="isCurrentUserSender(msg)" (click)="startEdit.emit(msg)" class="hover-btn" title="Edit">
+          <img src="/icons/edit.svg" class="icon-img-sm" alt="Edit" />
+        </button>
+
+        <button *ngIf="isCurrentUserSender(msg)" (click)="deleteMessage.emit(msg)" class="hover-btn delete" title="Delete">
+          <img src="/icons/trash.svg" class="icon-img-sm" alt="Delete" />
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div *ngIf="typingIndicatorText" class="typing-indicator-row">
+    <div class="typing-bubble">
+      <div class="typing-dots">
+        <span class="dot-bounce"></span>
+        <span class="dot-bounce"></span>
+        <span class="dot-bounce"></span>
+      </div>
+      <span class="typing-user-text">{{ typingIndicatorText }}</span>
+    </div>
+  </div>
+</div>

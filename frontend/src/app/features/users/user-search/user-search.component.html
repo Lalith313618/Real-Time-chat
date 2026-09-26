@@ -1,0 +1,146 @@
+<div class="user-search-container">
+  <div class="page-header">
+    <div>
+      <span class="pill-tag">Directory & Discovery</span>
+      <h2 class="page-title">Find Users</h2>
+      <p class="page-subtitle">Search for registered users by name or email to start real-time conversations</p>
+    </div>
+  </div>
+
+  <div *ngIf="conversationSuccess() as cs" class="alert-box alert-success">
+    <img src="/icons/check.svg" class="icon-img-sm" alt="Success" />
+    <div class="alert-content">
+      <strong>{{ cs.message }}</strong>
+      <span class="alert-sub">Conversation ID: <code>{{ cs.conversation._id }}</code> &bull; Ready for messaging</span>
+    </div>
+  </div>
+
+  <div class="glass-card search-card">
+    <div class="search-input-wrapper">
+      <img src="/icons/search.svg" class="search-icon icon-img-sm" alt="Search" />
+      <input
+        type="text"
+        [ngModel]="searchQuery()"
+        (ngModelChange)="onSearchChange($event)"
+        placeholder="Type a name or email address (e.g. Jordan, alice@example.com)..."
+        class="search-input"
+        autocomplete="off"
+      />
+      <button *ngIf="searchQuery()" (click)="clearSearch()" class="clear-btn" title="Clear search">
+        <img src="/icons/close.svg" class="icon-img-sm" alt="Clear" />
+      </button>
+      <div *ngIf="isLoading()" class="search-spinner">
+        <span class="loader-spinner"></span>
+      </div>
+    </div>
+  </div>
+
+  <div class="section-meta-row">
+    <h3>
+      {{ searchQuery() ? 'Search Results (' + searchResults().length + ')' : 'Community Directory (' + allUsers().length + ')' }}
+    </h3>
+    <span *ngIf="searchQuery()" class="search-indicator">
+      Filtering by: "<strong>{{ searchQuery() }}</strong>"
+    </span>
+  </div>
+
+  <div class="users-grid" *ngIf="(searchQuery() ? searchResults() : allUsers()) as displayUsers">
+    <div *ngFor="let user of displayUsers" class="glass-card user-card">
+      <div class="user-card-header">
+        <div class="avatar-container">
+          <div *ngIf="!user.profileImage" class="avatar-circle">
+            {{ user.name.charAt(0).toUpperCase() }}
+          </div>
+          <img *ngIf="user.profileImage" [src]="user.profileImage" [alt]="user.name" class="avatar-img" />
+          <span class="status-indicator-badge" [class.online]="user.isOnline" [title]="user.isOnline ? 'Online' : 'Offline'"></span>
+        </div>
+        <div class="user-main-info">
+          <h4 class="card-user-name">{{ user.name }}</h4>
+          <p class="card-user-email">{{ user.email }}</p>
+        </div>
+      </div>
+
+      <div class="user-card-meta">
+        <div class="meta-item">
+          <span class="meta-label">Status</span>
+          <span class="badge" [ngClass]="user.isOnline ? 'badge-success' : 'badge-offline'">
+            {{ user.isOnline ? 'Online' : 'Offline' }}
+          </span>
+        </div>
+        <div class="meta-item">
+          <span class="meta-label">Last Seen</span>
+          <span class="meta-value">
+            {{ user.lastSeen ? (user.lastSeen | date:'shortTime') : 'Recent' }}
+          </span>
+        </div>
+      </div>
+
+      <div class="user-card-actions">
+        <button class="btn btn-secondary btn-sm card-action-btn" (click)="viewProfile(user)">
+          <img src="/icons/user.svg" class="icon-img-sm" alt="Profile" />
+          View Profile
+        </button>
+        <button class="btn btn-primary btn-sm card-action-btn" (click)="startConversation(user)" [disabled]="isCreatingChat()">
+          <img src="/icons/chat.svg" class="icon-img-sm" alt="Message" />
+          Message
+        </button>
+      </div>
+    </div>
+
+    <div *ngIf="displayUsers.length === 0 && !isLoading()" class="glass-card empty-card">
+      <div class="empty-icon">
+        <img src="/icons/search.svg" class="icon-img-lg" alt="Search" />
+      </div>
+      <h4>No Users Found</h4>
+      <p>No registered users match your search criteria. Try a different name or email.</p>
+      <button *ngIf="searchQuery()" (click)="clearSearch()" class="btn btn-secondary btn-sm">
+        Reset Search
+      </button>
+    </div>
+  </div>
+
+  <div *ngIf="showProfileModal() && selectedUser() as user" class="modal-backdrop" (click)="closeProfileModal()">
+    <div class="modal-card glass-card" (click)="$event.stopPropagation()">
+      <button class="modal-close-btn" (click)="closeProfileModal()" aria-label="Close modal">
+        &times;
+      </button>
+
+      <div class="modal-header">
+        <div class="modal-avatar">
+          <div *ngIf="!user.profileImage" class="modal-avatar-circle">
+            {{ user.name.charAt(0).toUpperCase() }}
+          </div>
+          <img *ngIf="user.profileImage" [src]="user.profileImage" [alt]="user.name" class="modal-avatar-img" />
+          <span class="status-indicator-badge large" [class.online]="user.isOnline"></span>
+        </div>
+        <h3 class="modal-name">{{ user.name }}</h3>
+        <p class="modal-email">{{ user.email }}</p>
+      </div>
+
+      <div class="modal-details-list">
+        <div class="detail-row">
+          <span class="detail-label">Online Status</span>
+          <span class="badge" [ngClass]="user.isOnline ? 'badge-success' : 'badge-offline'">
+            {{ user.isOnline ? 'Active Now' : 'Offline' }}
+          </span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-label">Last Seen</span>
+          <span class="detail-val">{{ user.lastSeen ? (user.lastSeen | date:'medium') : 'Recently active' }}</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-label">Joined Platform</span>
+          <span class="detail-val">{{ user.createdAt ? (user.createdAt | date:'mediumDate') : 'Verified User' }}</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-label">User ID</span>
+          <span class="detail-val mono">{{ user._id }}</span>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn btn-secondary" (click)="closeProfileModal()">Close</button>
+      </div>
+    </div>
+  </div>
+</div>

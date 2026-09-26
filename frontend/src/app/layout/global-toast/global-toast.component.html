@@ -1,0 +1,25 @@
+<div *ngIf="notificationService.activeToast() as toast" class="global-toast-container">
+  <div
+    class="toast-card glass-card"
+    (click)="toast.onClick && toast.onClick(); notificationService.dismissToast()"
+  >
+    <div class="toast-avatar" *ngIf="toast.avatar">
+      <img [src]="toast.avatar" [alt]="toast.title" />
+    </div>
+    <div class="toast-avatar placeholder-avatar" *ngIf="!toast.avatar">
+      <img src="/icons/chat.svg" class="icon-img-sm" alt="Toast" />
+    </div>
+    <div class="toast-body">
+      <div class="toast-title">{{ toast.title }}</div>
+      <div class="toast-message">{{ toast.message }}</div>
+    </div>
+    <button
+      class="toast-close-btn"
+      (click)="$event.stopPropagation(); notificationService.dismissToast()"
+      title="Dismiss"
+      aria-label="Dismiss toast"
+    >
+      &times;
+    </button>
+  </div>
+</div>

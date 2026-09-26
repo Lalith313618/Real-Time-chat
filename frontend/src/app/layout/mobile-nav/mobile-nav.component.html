@@ -1,0 +1,29 @@
+<nav *ngIf="authService.isLoggedIn()" class="mobile-bottom-nav glass-card" aria-label="Mobile Navigation">
+  <a routerLink="/chat" class="bottom-nav-item" [class.active]="currentPath().startsWith('/chat')">
+    <div class="bottom-nav-icon">
+      <img src="/icons/chat.svg" class="icon-img" alt="Chats" />
+    </div>
+    <span class="bottom-nav-label">Chats</span>
+  </a>
+
+  <a routerLink="/users/search" class="bottom-nav-item" [class.active]="currentPath().startsWith('/users/search')">
+    <div class="bottom-nav-icon">
+      <img src="/icons/search.svg" class="icon-img" alt="Search" />
+    </div>
+    <span class="bottom-nav-label">Search</span>
+  </a>
+
+  <a routerLink="/" class="bottom-nav-item" [class.active]="currentPath() === '/'">
+    <div class="bottom-nav-icon">
+      <img src="/icons/home.svg" class="icon-img" alt="Dashboard" />
+    </div>
+    <span class="bottom-nav-label">Dashboard</span>
+  </a>
+
+  <a routerLink="/users/profile" class="bottom-nav-item" [class.active]="currentPath().startsWith('/users/profile')">
+    <div class="bottom-nav-icon">
+      <img src="/icons/user.svg" class="icon-img" alt="Profile" />
+    </div>
+    <span class="bottom-nav-label">Profile</span>
+  </a>
+</nav>

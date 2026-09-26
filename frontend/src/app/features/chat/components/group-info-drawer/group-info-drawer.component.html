@@ -1,0 +1,147 @@
+<div *ngIf="isOpen && conversation" class="drawer-backdrop" (click)="onClose()">
+  <div class="group-info-drawer glass-card" (click)="$event.stopPropagation()">
+    <div class="drawer-header">
+      <h3 class="drawer-title">Group Information</h3>
+      <button (click)="onClose()" class="drawer-close-btn" aria-label="Close">
+        &times;
+      </button>
+    </div>
+
+    <div *ngIf="groupActionMessage" class="action-alert-toast">
+      {{ groupActionMessage }}
+    </div>
+
+    <div class="drawer-body">
+      <div class="group-hero-card">
+        <div class="group-hero-avatar">
+          <img src="/icons/group.svg" class="icon-img-lg" alt="Group" />
+        </div>
+
+        <div *ngIf="!isEditingGroupName" class="group-name-view">
+          <h4 class="group-hero-title">{{ conversation.groupName }}</h4>
+          <button
+            *ngIf="isCurrentUserAdmin(conversation)"
+            (click)="startEditingName()"
+            class="btn-edit-inline"
+            title="Edit Group Name"
+          >
+            <img src="/icons/edit.svg" class="icon-img-sm" alt="Edit" />
+            Rename
+          </button>
+        </div>
+
+        <div *ngIf="isEditingGroupName" class="group-name-edit-box">
+          <input
+            type="text"
+            [(ngModel)]="editGroupNameInput"
+            class="form-input edit-name-input"
+            maxlength="50"
+          />
+          <div class="edit-name-actions">
+            <button (click)="saveGroupName()" class="btn btn-primary btn-sm" [disabled]="groupActionLoading">
+              Save
+            </button>
+            <button (click)="cancelEditingName()" class="btn btn-secondary btn-sm">
+              Cancel
+            </button>
+          </div>
+        </div>
+
+        <span class="group-created-meta">
+          {{ conversation.participants.length }} members • Group ID: {{ conversation._id | slice:0:8 }}...
+        </span>
+      </div>
+
+      <div *ngIf="isCurrentUserAdmin(conversation)" class="drawer-section">
+        <div class="section-title-bar">
+          <span class="section-label">Add New Members</span>
+          <button
+            (click)="isAddingMemberOpen = !isAddingMemberOpen"
+            class="btn btn-secondary btn-sm"
+          >
+            {{ isAddingMemberOpen ? 'Cancel' : '+ Add Member' }}
+          </button>
+        </div>
+
+        <div *ngIf="isAddingMemberOpen" class="add-member-panel">
+          <input
+            type="text"
+            [(ngModel)]="memberToAddSearch"
+            placeholder="Search user to add..."
+            class="form-input add-member-input"
+          />
+          <div class="add-member-list">
+            <div *ngFor="let u of filteredAvailableUsers" class="add-user-item">
+              <div class="user-meta-inline">
+                <span class="u-name">{{ u.name }}</span>
+                <span class="u-email">{{ u.email }}</span>
+              </div>
+              <button
+                (click)="onAddMember(u)"
+                class="btn btn-primary btn-xs"
+                [disabled]="groupActionLoading"
+              >
+                Add
+              </button>
+            </div>
+            <div *ngIf="filteredAvailableUsers.length === 0" class="no-available-users">
+              No users available to add
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="drawer-section">
+        <span class="section-label">Group Members ({{ conversation.participants.length }})</span>
+        <div class="members-stack">
+          <div *ngFor="let m of conversation.participants" class="member-card-row">
+            <div class="member-info-col">
+              <div class="member-avatar">
+                <div *ngIf="!m.profileImage" class="member-avatar-circle">
+                  {{ m.name ? m.name.charAt(0).toUpperCase() : 'U' }}
+                </div>
+                <img *ngIf="m.profileImage" [src]="m.profileImage" [alt]="m.name" class="member-avatar-img" />
+                <span class="member-status-dot" [class.online]="isParticipantOnline(m)"></span>
+              </div>
+              <div class="member-text-col">
+                <div class="member-name-tag-row">
+                  <span class="member-name">{{ m.name }}</span>
+                  <span *ngIf="isUserAdmin(m._id, conversation)" class="admin-badge">Admin</span>
+                  <span *ngIf="m._id === authService.currentUser()?._id" class="you-badge">You</span>
+                </div>
+                <span class="member-email">{{ m.email }}</span>
+              </div>
+            </div>
+
+            <div *ngIf="isCurrentUserAdmin(conversation) && m._id !== authService.currentUser()?._id" class="member-admin-actions">
+              <button
+                (click)="onToggleAdmin(m)"
+                class="action-icon-btn"
+                [title]="isUserAdmin(m._id, conversation) ? 'Dismiss as Admin' : 'Make Group Admin'"
+                [disabled]="groupActionLoading"
+              >
+                <img src="/icons/user.svg" class="icon-img-sm" alt="Admin" />
+              </button>
+
+              <button
+                (click)="onRemoveMember(m)"
+                class="action-icon-btn danger"
+                title="Remove from Group"
+                [disabled]="groupActionLoading"
+              >
+                <img src="/icons/trash.svg" class="icon-img-sm" alt="Remove" />
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="drawer-footer-action">
+        <button (click)="onLeaveGroup()" class="btn btn-danger-outline btn-block" [disabled]="groupActionLoading">
+          <img src="/icons/logout.svg" class="icon-img-sm" alt="Leave" />
+          <span>Leave Group</span>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

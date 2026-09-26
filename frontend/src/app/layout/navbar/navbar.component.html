@@ -1,0 +1,83 @@
+<header class="app-header glass-card">
+  <div class="header-left">
+    <div class="brand">
+      <a routerLink="/" class="brand-link" title="PulseChat - Real-Time Messaging">
+        <div class="brand-logo">
+          <img src="/icons/chat.svg" class="icon-img" alt="PulseChat" />
+        </div>
+        <div>
+          <h1 class="brand-title">PulseChat</h1>
+          <p class="brand-subtitle">Real-Time Messaging Platform</p>
+        </div>
+      </a>
+    </div>
+
+    <nav *ngIf="authService.isLoggedIn()" class="main-nav" aria-label="Desktop Navigation">
+      <a routerLink="/" class="nav-item" [class.active]="currentPath() === '/'">
+        <img src="/icons/home.svg" class="icon-img-sm" alt="Dashboard" />
+        <span>Dashboard</span>
+      </a>
+      <a routerLink="/chat" class="nav-item" [class.active]="currentPath().startsWith('/chat')">
+        <img src="/icons/chat.svg" class="icon-img-sm" alt="Chat" />
+        <span>Chat</span>
+      </a>
+      <a routerLink="/users/search" class="nav-item" [class.active]="currentPath().startsWith('/users/search')">
+        <img src="/icons/search.svg" class="icon-img-sm" alt="Find Users" />
+        <span>Find Users</span>
+      </a>
+      <a routerLink="/users/profile" class="nav-item" [class.active]="currentPath().startsWith('/users/profile')">
+        <img src="/icons/user.svg" class="icon-img-sm" alt="Profile" />
+        <span>Profile</span>
+      </a>
+    </nav>
+  </div>
+
+  <div class="header-right">
+    <div class="header-badges">
+      <div *ngIf="!networkService.isOnline()" class="badge badge-warning offline-header-pill">
+        <span class="status-dot offline"></span>
+        Offline
+      </div>
+      <div *ngIf="networkService.isOnline()" class="badge" [ngClass]="socketConnected() ? 'badge-success' : 'badge-warning'">
+        <span class="status-dot" [class.online]="socketConnected()"></span>
+        {{ socketConnected() ? 'Live' : 'Connecting...' }}
+      </div>
+    </div>
+
+    <div class="user-session-nav">
+      <ng-container *ngIf="!authService.isLoggedIn()">
+        <a
+          routerLink="/"
+          class="btn btn-secondary btn-sm nav-home-btn"
+          [class.active]="currentPath() === '/'"
+          title="Back to Landing Page"
+        >
+          <img src="/icons/home.svg" class="icon-img-sm" alt="Home" />
+          <span>Home</span>
+        </a>
+
+        <a routerLink="/auth/login" class="btn btn-secondary btn-sm" [class.btn-auth-current]="currentPath().startsWith('/auth/login')">Sign In</a>
+        <a routerLink="/auth/register" class="btn btn-primary btn-sm" [class.btn-auth-current]="currentPath().startsWith('/auth/register')">Create Account</a>
+      </ng-container>
+
+      <ng-container *ngIf="authService.currentUser() as user">
+        <a routerLink="/users/profile" class="user-profile-badge" title="Go to My Profile">
+          <div *ngIf="!user.profileImage" class="user-avatar-circle">
+            {{ user.name.charAt(0).toUpperCase() }}
+          </div>
+          <img *ngIf="user.profileImage" [src]="user.profileImage" [alt]="user.name" class="user-avatar-circle img" />
+          <div class="user-info-text">
+            <span class="user-name">{{ user.name }}</span>
+            <span class="user-status-text">
+              <span class="status-indicator"></span> Online
+            </span>
+          </div>
+        </a>
+        <button (click)="logout()" class="btn btn-secondary btn-sm logout-btn" title="Sign Out">
+          <img src="/icons/logout.svg" class="icon-img-sm" alt="Logout" />
+          <span>Logout</span>
+        </button>
+      </ng-container>
+    </div>
+  </div>
+</header>

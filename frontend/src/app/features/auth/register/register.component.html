@@ -1,0 +1,115 @@
+<div class="auth-wrapper">
+  <div class="glass-card auth-card">
+    <div class="auth-header">
+      <div class="auth-icon-badge">
+        <img src="/icons/user.svg" class="icon-img-lg" alt="Register" />
+      </div>
+      <h2 class="auth-title">Create Account</h2>
+      <p class="auth-desc">Join PulseChat and connect with people in real-time</p>
+    </div>
+
+    <div *ngIf="errorMessage()" class="alert-banner">
+      <img src="/icons/info.svg" class="icon-img-sm" alt="Error" />
+      <span>{{ errorMessage() }}</span>
+    </div>
+
+    <form [formGroup]="registerForm" (ngSubmit)="onSubmit()" class="auth-form" novalidate>
+      <div class="form-group">
+        <label for="name" class="form-label">Full Name</label>
+        <div class="input-wrapper" [class.input-error]="registerForm.get('name')?.invalid && registerForm.get('name')?.touched">
+          <img src="/icons/user.svg" class="input-icon icon-img-sm" alt="Name" />
+          <input
+            id="name"
+            type="text"
+            formControlName="name"
+            placeholder="John Doe"
+            class="form-input"
+            autocomplete="name"
+          />
+        </div>
+        <p *ngIf="registerForm.get('name')?.errors?.['required'] && registerForm.get('name')?.touched" class="field-error">
+          Name is required
+        </p>
+        <p *ngIf="registerForm.get('name')?.errors?.['minlength'] && registerForm.get('name')?.touched" class="field-error">
+          Name must be at least 2 characters
+        </p>
+      </div>
+
+      <div class="form-group">
+        <label for="email" class="form-label">Email Address</label>
+        <div class="input-wrapper" [class.input-error]="registerForm.get('email')?.invalid && registerForm.get('email')?.touched">
+          <img src="/icons/user.svg" class="input-icon icon-img-sm" alt="Email" />
+          <input
+            id="email"
+            type="email"
+            formControlName="email"
+            placeholder="you@example.com"
+            class="form-input"
+            autocomplete="email"
+          />
+        </div>
+        <p *ngIf="registerForm.get('email')?.errors?.['required'] && registerForm.get('email')?.touched" class="field-error">
+          Email is required
+        </p>
+        <p *ngIf="registerForm.get('email')?.errors?.['email'] && registerForm.get('email')?.touched" class="field-error">
+          Please enter a valid email address
+        </p>
+      </div>
+
+      <div class="form-group">
+        <label for="password" class="form-label">Password</label>
+        <div class="input-wrapper" [class.input-error]="registerForm.get('password')?.invalid && registerForm.get('password')?.touched">
+          <img src="/icons/file.svg" class="input-icon icon-img-sm" alt="Password" />
+          <input
+            id="password"
+            [type]="showPassword() ? 'text' : 'password'"
+            formControlName="password"
+            placeholder="At least 6 characters"
+            class="form-input"
+            autocomplete="new-password"
+          />
+          <button type="button" class="visibility-toggle" (click)="togglePassword()" aria-label="Toggle password visibility">
+            <span>{{ showPassword() ? 'Hide' : 'Show' }}</span>
+          </button>
+        </div>
+        <p *ngIf="registerForm.get('password')?.errors?.['required'] && registerForm.get('password')?.touched" class="field-error">
+          Password is required
+        </p>
+        <p *ngIf="registerForm.get('password')?.errors?.['minlength'] && registerForm.get('password')?.touched" class="field-error">
+          Password must be at least 6 characters
+        </p>
+      </div>
+
+      <div class="form-group">
+        <label for="confirmPassword" class="form-label">Confirm Password</label>
+        <div class="input-wrapper" [class.input-error]="(registerForm.get('confirmPassword')?.touched && registerForm.hasError('passwordMismatch')) || (registerForm.get('confirmPassword')?.invalid && registerForm.get('confirmPassword')?.touched)">
+          <img src="/icons/file.svg" class="input-icon icon-img-sm" alt="Confirm" />
+          <input
+            id="confirmPassword"
+            [type]="showPassword() ? 'text' : 'password'"
+            formControlName="confirmPassword"
+            placeholder="Re-enter password"
+            class="form-input"
+            autocomplete="new-password"
+          />
+        </div>
+        <p *ngIf="registerForm.get('confirmPassword')?.errors?.['required'] && registerForm.get('confirmPassword')?.touched" class="field-error">
+          Confirm password is required
+        </p>
+        <p *ngIf="registerForm.hasError('passwordMismatch') && registerForm.get('confirmPassword')?.touched" class="field-error">
+          Passwords do not match
+        </p>
+      </div>
+
+      <button type="submit" class="btn btn-primary submit-btn" [disabled]="isLoading()">
+        <span *ngIf="isLoading()" class="loader-spinner"></span>
+        <span>{{ isLoading() ? 'Creating account...' : 'Create Account' }}</span>
+      </button>
+    </form>
+
+    <div class="auth-footer">
+      <span>Already have an account?</span>
+      <a routerLink="/auth/login" class="link-highlight">Sign in</a>
+    </div>
+  </div>
+</div>

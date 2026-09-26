@@ -1,0 +1,107 @@
+<aside class="chat-sidebar" [class.mobile-hidden]="activeConversation !== null">
+  <div class="sidebar-header">
+    <div class="sidebar-title-row">
+      <div class="sidebar-title-wrap">
+        <h2 class="sidebar-title">Messages</h2>
+        <span class="badge badge-info">{{ conversations.length }}</span>
+      </div>
+      <div class="sidebar-actions-group">
+        <button (click)="onOpenCreateGroup()" class="btn btn-secondary btn-icon" title="New Group">
+          <img src="/icons/users.svg" class="icon-img" alt="New Group" />
+        </button>
+
+        <a routerLink="/users/search" class="btn btn-secondary btn-icon" title="New Chat with Users">
+          <img src="/icons/plus.svg" class="icon-img" alt="New Chat" />
+        </a>
+      </div>
+    </div>
+
+    <div class="conv-search-box">
+      <img src="/icons/search.svg" class="search-icon icon-img-sm" alt="Search" />
+      <input
+        type="text"
+        [ngModel]="conversationFilter"
+        (ngModelChange)="onFilterChange($event)"
+        placeholder="Filter conversations..."
+        class="conv-search-input"
+      />
+      <button *ngIf="conversationFilter" (click)="onFilterChange('')" class="clear-btn">
+        <img src="/icons/close.svg" class="icon-img-sm" alt="Clear" />
+      </button>
+    </div>
+  </div>
+
+  <div class="conversations-list">
+    <div *ngIf="isLoadingConversations" class="loading-state">
+      <span class="loader-spinner"></span>
+      <span>Loading chats...</span>
+    </div>
+
+    <div *ngIf="!isLoadingConversations && filteredConversations.length === 0" class="sidebar-empty">
+      <div class="empty-icon-sm">
+        <img src="/icons/chat.svg" class="icon-img-lg" alt="Chat" />
+      </div>
+      <p>No conversations found</p>
+      <a routerLink="/users/search" class="link-highlight">Find users to chat with</a>
+    </div>
+
+    <div
+      *ngFor="let conv of filteredConversations"
+      (click)="onSelect(conv)"
+      class="conv-item"
+      [class.active]="activeConversation?._id === conv._id"
+    >
+      <ng-container *ngIf="conv.isGroup">
+        <div class="conv-avatar-wrapper group-avatar">
+          <div class="conv-avatar-circle group-badge">
+            <img src="/icons/group.svg" class="icon-img-sm" alt="Group" />
+          </div>
+        </div>
+
+        <div class="conv-details">
+          <div class="conv-details-top">
+            <span class="conv-name group-name-title">{{ conv.groupName || 'Group Chat' }}</span>
+            <div class="conv-meta-right">
+              <span class="conv-time">
+                {{ conv.lastMessageAt ? (conv.lastMessageAt | date:'shortTime') : '' }}
+              </span>
+              <span *ngIf="conv.unreadCount && conv.unreadCount > 0" class="unread-pill">
+                {{ conv.unreadCount > 99 ? '99+' : conv.unreadCount }}
+              </span>
+            </div>
+          </div>
+          <p class="conv-preview">
+            {{ conv.lastMessage || (conv.participants.length + ' members') }}
+          </p>
+        </div>
+      </ng-container>
+
+      <ng-container *ngIf="!conv.isGroup && getOtherParticipant(conv) as other">
+        <div class="conv-avatar-wrapper">
+          <div *ngIf="!other.profileImage" class="conv-avatar-circle">
+            {{ other.name.charAt(0).toUpperCase() }}
+          </div>
+          <img *ngIf="other.profileImage" [src]="other.profileImage" [alt]="other.name" class="conv-avatar-img" />
+          <span class="conv-status-dot" [class.online]="isParticipantOnline(other)"></span>
+        </div>
+
+        <div class="conv-details">
+          <div class="conv-details-top">
+            <span class="conv-name">{{ other.name }}</span>
+            <div class="conv-meta-right">
+              <span class="conv-time">
+                {{ conv.lastMessageAt ? (conv.lastMessageAt | date:'shortTime') : '' }}
+              </span>
+              <span *ngIf="conv.unreadCount && conv.unreadCount > 0" class="unread-pill">
+                {{ conv.unreadCount > 99 ? '99+' : conv.unreadCount }}
+              </span>
+            </div>
+          </div>
+          <p class="conv-preview">
+            {{ conv.lastMessage || 'Start a conversation...' }}
+          </p>
+        </div>
+      </ng-container>
+    </div>
+  </div>
+</aside>

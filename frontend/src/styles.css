@@ -1,0 +1,259 @@
+/* ==========================================================================
+   Design System & Global Tokens - PulseChat "Siltstone" Palette
+   Palette: #CBBD93 (Siltstone Sand), #FFF5B8 (Buttercream), #FFB16E (Soft Apricot), #CCA25A (Golden Sandstone)
+   ========================================================================== */
+
+:root {
+  /* Siltstone Raw Palette Tokens */
+  --siltstone-sand: #CBBD93;
+  --siltstone-buttercream: #FFF5B8;
+  --siltstone-apricot: #FFB16E;
+  --siltstone-golden: #CCA25A;
+
+  /* Color Palette - Warm Siltstone Surface & Controls */
+  --bg-primary: #FAF7F0;           /* Soft siltstone linen background */
+  --bg-secondary: #FFFDF8;         /* Warm ivory cream surface */
+  --bg-tertiary: #F3EBD9;          /* Gentle sand control background */
+  --bg-card: #FFFDF8;              /* Warm card */
+  --bg-card-hover: #F6EEDC;
+  --bg-glass: rgba(255, 253, 248, 0.95);
+
+  /* Borders & Dividers */
+  --border-subtle: #DFD5BF;
+  --border-focus: #CCA25A;
+  --border-glow: rgba(204, 162, 90, 0.25);
+
+  /* Primary Brand: Warm Siltstone Apricot & Golden Sandstone */
+  --primary: #C57D3A;              /* Rich warm accessible apricot ochre */
+  --primary-light: #FFB16E;        /* Exact Soft Apricot */
+  --primary-dark: #A86427;
+  --primary-gradient: linear-gradient(135deg, #FFB16E 0%, #CCA25A 100%);
+  --primary-gradient-rich: linear-gradient(135deg, #DE813A 0%, #BA842E 100%);
+
+  /* Secondary & Tertiary Accents from Siltstone */
+  --accent-yellow: #FFF5B8;        /* Exact Buttercream */
+  --accent-apricot: #FFB16E;       /* Exact Soft Apricot */
+  --accent-sand: #CBBD93;          /* Exact Siltstone Sand */
+  --accent-golden: #CCA25A;        /* Exact Golden Sandstone */
+
+  --accent-sunset-gradient: linear-gradient(135deg, #FFF5B8 0%, #FFB16E 100%);
+  --accent-sandstone-gradient: linear-gradient(135deg, #CCA25A 0%, #A8813C 100%);
+  --accent-teal: #4F9983;          /* Muted sage teal for presence */
+
+  /* Typography Colors - Deep Warm Siltstone Charcoal & Mocha */
+  --text-primary: #2B2317;
+  --text-secondary: #6B5E4A;
+  --text-muted: #9E927C;
+  --text-inverse: #ffffff;
+
+  /* Status Colors */
+  --status-online: #5B9B68;
+  --status-offline: #9E927C;
+  --status-away: #CCA25A;
+  --status-busy: #C5563A;
+
+  /* Typography */
+  --font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  --font-heading: 'Outfit', 'Plus Jakarta Sans', sans-serif;
+
+  /* Shadows - Warm Soft Natural Elevation */
+  --shadow-sm: 0 1px 3px rgba(43, 35, 23, 0.05), 0 1px 2px rgba(43, 35, 23, 0.03);
+  --shadow-md: 0 4px 14px -2px rgba(43, 35, 23, 0.08), 0 2px 5px -2px rgba(43, 35, 23, 0.04);
+  --shadow-lg: 0 14px 34px -4px rgba(43, 35, 23, 0.1), 0 4px 10px -2px rgba(43, 35, 23, 0.05);
+  --shadow-glow: 0 0 25px rgba(204, 162, 90, 0.25);
+
+  /* Border Radii */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+  --radius-full: 9999px;
+
+  /* Transitions */
+  --transition-fast: 0.15s ease;
+  --transition-normal: 0.25s ease;
+  --transition-slow: 0.4s ease;
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body {
+  height: 100%;
+  width: 100%;
+  font-family: var(--font-family);
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
+}
+
+/* Warm Siltstone Ambient Glow */
+body::before {
+  content: '';
+  position: fixed;
+  top: -15vw;
+  left: 15vw;
+  width: 55vw;
+  height: 55vw;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 245, 184, 0.45) 0%, rgba(250, 247, 240, 0) 70%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+body::after {
+  content: '';
+  position: fixed;
+  bottom: -20vw;
+  right: 10vw;
+  width: 60vw;
+  height: 60vw;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 177, 110, 0.2) 0%, rgba(250, 247, 240, 0) 70%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-heading);
+  letter-spacing: -0.02em;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+a {
+  color: var(--primary);
+  text-decoration: none;
+  transition: color var(--transition-fast);
+}
+
+a:hover {
+  color: var(--primary-dark);
+}
+
+/* Button Utilities */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  font-family: var(--font-family);
+  font-weight: 600;
+  font-size: 0.925rem;
+  padding: 0.65rem 1.25rem;
+  border-radius: var(--radius-md);
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  outline: none;
+}
+
+.btn-primary {
+  background: var(--primary-gradient-rich);
+  color: #FFFDF8;
+  box-shadow: 0 4px 14px rgba(197, 125, 58, 0.28);
+}
+
+.btn-primary:hover {
+  transform: translateY(-1px);
+  background: linear-gradient(135deg, #CE742D 0%, #A87425 100%);
+  box-shadow: 0 6px 18px rgba(197, 125, 58, 0.38);
+}
+
+.btn-secondary {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+  border: 1px solid var(--border-subtle);
+  box-shadow: var(--shadow-sm);
+}
+
+.btn-secondary:hover {
+  background: #E8DFC8;
+  border-color: #CCA25A;
+  color: var(--primary-dark);
+}
+
+/* Badge Utilities */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.25rem 0.75rem;
+  border-radius: var(--radius-full);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.badge-success {
+  background: rgba(91, 155, 104, 0.15);
+  color: #3B7246;
+  border: 1px solid rgba(91, 155, 104, 0.3);
+}
+
+.badge-warning {
+  background: #FFF5B8;
+  color: #725615;
+  border: 1px solid rgba(204, 162, 90, 0.4);
+}
+
+.badge-info {
+  background: rgba(255, 177, 110, 0.2);
+  color: #A86427;
+  border: 1px solid rgba(255, 177, 110, 0.45);
+}
+
+/* Warm Clean Card Utility */
+.glass-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--siltstone-sand);
+  border-radius: var(--radius-full);
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--siltstone-golden);
+}
+
+.icon-img {
+  display: inline-block;
+  vertical-align: middle;
+  object-fit: contain;
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+
+.icon-img-sm {
+  width: 14px;
+  height: 14px;
+}
+
+.icon-img-md {
+  width: 18px;
+  height: 18px;
+}
+
+.icon-img-lg {
+  width: 24px;
+  height: 24px;
+}
+

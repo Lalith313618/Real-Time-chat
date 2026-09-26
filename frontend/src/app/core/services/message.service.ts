@@ -1,0 +1,145 @@
+import { Injectable, inject, signal } from '@angular/core';
+import { HttpClient, HttpEvent, HttpRequest } from '@angular/common/http';
+import { Observable, tap, map } from 'rxjs';
+import { environment } from '../../../environments/environment';
+import { Message, MessageType } from '../models/message.model';
+
+export interface SendMessageDto {
+  conversationId: string;
+  content: string;
+  messageType?: MessageType;
+  fileUrl?: string;
+  fileName?: string;
+  fileSize?: number;
+  duration?: number;
+  replyTo?: string | null;
+}
+
+export interface UploadedFile {
+  fileUrl: string;
+  publicId: string;
+  resourceType: string;
+  fileName: string;
+  fileSize: number;
+  mimetype: string;
+}
+
+export interface UploadResponse {
+  status: string;
+  file: UploadedFile;
+}
+
+export interface MessagesResponse {
+  status: string;
+  results: number;
+  pagination: {
+    total: number;
+    page: number;
+    totalPages: number;
+    limit: number;
+    hasMore: boolean;
+  };
+  messages: Message[];
+}
+
+@Injectable({
+  providedIn: 'root'
+})
+export class MessageService {
+  private readonly http = inject(HttpClient);
+  private readonly apiUrl = `${environment.apiUrl}/messages`;
+
+  // Reactive state signals
+  readonly messages = signal<Message[]>([]);
+  readonly isLoading = signal<boolean>(false);
+  readonly isSending = signal<boolean>(false);
+  readonly activeReplyTo = signal<Message | null>(null);
+
+  getConversationMessages(conversationId: string, page = 1, limit = 50): Observable<MessagesResponse> {
+    this.isLoading.set(true);
+    return this.http
+      .get<MessagesResponse>(`${this.apiUrl}/${conversationId}`, {
+        params: { page, limit }
+      })
+      .pipe(
+        tap((res) => {
+          this.messages.set(res.messages);
+          this.isLoading.set(false);
+        })
+      );
+  }
+
+  sendMessage(dto: SendMessageDto): Observable<Message> {
+    this.isSending.set(true);
+    return this.http
+      .post<{ status: string; message: Message }>(this.apiUrl, dto)
+      .pipe(
+        map((res) => res.message),
+        tap((newMsg) => {
+          this.messages.update((list) => [...list, newMsg]);
+          this.activeReplyTo.set(null);
+          this.isSending.set(false);
+        })
+      );
+  }
+
+  editMessage(messageId: string, content: string): Observable<Message> {
+    return this.http
+      .put<{ status: string; message: Message }>(`${this.apiUrl}/${messageId}`, { content })
+      .pipe(
+        map((res) => res.message),
+        tap((updatedMsg) => {
+          this.messages.update((list) =>
+            list.map((m) => (m._id === messageId ? updatedMsg : m))
+          );
+        })
+      );
+  }
+
+  deleteMessage(messageId: string): Observable<any> {
+    return this.http.delete(`${this.apiUrl}/${messageId}`).pipe(
+      tap(() => {
+        this.messages.update((list) =>
+          list.map((m) =>
+            m._id === messageId
+              ? { ...m, isDeleted: true, content: 'This message was deleted', fileUrl: '' }
+              : m
+          )
+        );
+      })
+    );
+  }
+
+  markAsRead(messageId: string): Observable<any> {
+    return this.http.put(`${this.apiUrl}/${messageId}/read`, {});
+  }
+
+  markAllAsRead(conversationId: string): Observable<any> {
+    return this.http.put(`${this.apiUrl}/conversation/${conversationId}/read-all`, {});
+  }
+
+  searchMessages(conversationId: string, q: string): Observable<Message[]> {
+    return this.http
+      .get<{ status: string; results: number; messages: Message[] }>(
+        `${this.apiUrl}/search/${conversationId}`,
+        { params: { q } }
+      )
+      .pipe(map((res) => res.messages));
+  }
+
+  uploadAttachment(file: File, target = 'message'): Observable<HttpEvent<UploadResponse>> {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const req = new HttpRequest('POST', `${this.apiUrl}/upload?target=${target}`, formData, {
+      reportProgress: true,
+    });
+
+    return this.http.request<UploadResponse>(req);
+  }
+
+  setReplyTo(message: Message | null): void {
+    this.activeReplyTo.set(message);
+  }
+}
+

@@ -1,0 +1,46 @@
+<div *ngIf="isOpen" class="chat-search-drawer">
+  <div class="search-drawer-inner">
+    <img src="/icons/search.svg" class="search-drawer-icon icon-img-sm" alt="Search" />
+    <input
+      type="text"
+      [ngModel]="searchQuery"
+      (ngModelChange)="onQueryChange($event)"
+      placeholder="Search this conversation..."
+      class="search-drawer-input"
+      autocomplete="off"
+    />
+    <button *ngIf="searchQuery" (click)="onClear()" class="search-clear-btn" title="Clear">
+      &times;
+    </button>
+  </div>
+
+  <div class="search-nav-controls" *ngIf="searchQuery.trim()">
+    <span *ngIf="isSearching" class="search-counter-text">Searching...</span>
+    <span *ngIf="!isSearching && searchResults.length === 0" class="search-counter-text">No matches</span>
+    <span *ngIf="!isSearching && searchResults.length > 0" class="search-counter-text">
+      {{ currentResultIndex + 1 }} of {{ searchResults.length }}
+    </span>
+
+    <button
+      (click)="onPrev()"
+      [disabled]="searchResults.length === 0"
+      class="search-arrow-btn"
+      title="Previous match"
+    >
+      ▲
+    </button>
+
+    <button
+      (click)="onNext()"
+      [disabled]="searchResults.length === 0"
+      class="search-arrow-btn"
+      title="Next match"
+    >
+      ▼
+    </button>
+  </div>
+
+  <button (click)="onClose()" class="search-drawer-close" title="Close search">
+    <img src="/icons/close.svg" class="icon-img-sm" alt="Close" />
+  </button>
+</div>

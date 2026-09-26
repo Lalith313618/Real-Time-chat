@@ -1,0 +1,97 @@
+<div *ngIf="isOpen" class="modal-backdrop" (click)="onClose()">
+  <div class="modal-box glass-card" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <div class="modal-title-wrap">
+        <div class="modal-header-icon">
+          <img src="/icons/group.svg" class="icon-img" alt="Group" />
+        </div>
+        <h3 class="modal-title">Create New Group</h3>
+      </div>
+      <button (click)="onClose()" class="modal-close-btn" aria-label="Close">
+        &times;
+      </button>
+    </div>
+
+    <div class="modal-body">
+      <div *ngIf="createGroupError" class="alert-error-banner">
+        {{ createGroupError }}
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Group Name *</label>
+        <input
+          type="text"
+          [ngModel]="newGroupName"
+          (ngModelChange)="onNameChange($event)"
+          placeholder="e.g. Project Orion, Core Team..."
+          class="form-input"
+          maxlength="50"
+        />
+      </div>
+
+      <div class="form-group">
+        <div class="selector-header">
+          <label class="form-label">Select Members</label>
+          <span class="selected-pill">
+            {{ selectedGroupMembers.length }} selected
+          </span>
+        </div>
+
+        <div class="modal-search-box">
+          <img src="/icons/search.svg" class="search-icon icon-img-sm" alt="Search" />
+          <input
+            type="text"
+            [ngModel]="userFilter"
+            (ngModelChange)="onFilterChange($event)"
+            placeholder="Search users by name or email..."
+            class="modal-search-input"
+          />
+        </div>
+
+        <div class="selectable-users-list">
+          <div
+            *ngFor="let u of filteredUsers"
+            (click)="onToggleMember(u._id)"
+            class="user-select-row"
+            [class.selected]="isMemberSelected(u._id)"
+          >
+            <div class="user-select-info">
+              <div class="user-avatar-sm">
+                <div *ngIf="!u.profileImage" class="avatar-circle-sm">
+                  {{ u.name.charAt(0).toUpperCase() }}
+                </div>
+                <img *ngIf="u.profileImage" [src]="u.profileImage" [alt]="u.name" class="avatar-img-sm" />
+              </div>
+              <div class="user-meta-col">
+                <span class="user-select-name">{{ u.name }}</span>
+                <span class="user-select-email">{{ u.email }}</span>
+              </div>
+            </div>
+
+            <div class="custom-checkbox" [class.checked]="isMemberSelected(u._id)">
+              <img *ngIf="isMemberSelected(u._id)" src="/icons/check.svg" class="icon-img-sm" alt="Selected" />
+            </div>
+          </div>
+
+          <div *ngIf="filteredUsers.length === 0" class="no-users-match">
+            No matching users found
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-footer">
+      <button (click)="onClose()" class="btn btn-secondary" [disabled]="isCreatingGroup">
+        Cancel
+      </button>
+      <button
+        (click)="onSubmit()"
+        class="btn btn-primary"
+        [disabled]="!newGroupName.trim() || selectedGroupMembers.length < 1 || isCreatingGroup"
+      >
+        <span *ngIf="isCreatingGroup" class="loader-spinner"></span>
+        <span>{{ isCreatingGroup ? 'Creating Group...' : 'Create Group' }}</span>
+      </button>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,132 @@
+<div class="profile-container">
+  <div class="page-header">
+    <span class="pill-tag">User Account</span>
+    <h2 class="page-title">Personal Profile</h2>
+    <p class="page-subtitle">Manage your account information, public display name, and avatar</p>
+  </div>
+
+  <div class="profile-layout" *ngIf="user() as u">
+    <div class="glass-card profile-preview-card">
+      <div class="preview-avatar-wrapper">
+        <div *ngIf="!imageUrlInput()" class="preview-avatar-circle">
+          {{ (nameInput() || u.name).charAt(0).toUpperCase() }}
+        </div>
+        <img *ngIf="imageUrlInput()" [src]="imageUrlInput()" [alt]="nameInput()" class="preview-avatar-img" />
+        <span class="status-indicator-badge" [class.online]="u.isOnline"></span>
+      </div>
+
+      <h3 class="preview-name">{{ nameInput() || u.name }}</h3>
+      <p class="preview-email">{{ u.email }}</p>
+
+      <div class="preview-meta-list">
+        <div class="meta-row">
+          <span>Account Status</span>
+          <span class="badge badge-success">Active Member</span>
+        </div>
+        <div class="meta-row">
+          <span>Real-Time Status</span>
+          <span class="badge" [ngClass]="u.isOnline ? 'badge-success' : 'badge-offline'">
+            {{ u.isOnline ? 'Online' : 'Offline' }}
+          </span>
+        </div>
+        <div class="meta-row">
+          <span>Member Since</span>
+          <span class="meta-txt">{{ u.createdAt ? (u.createdAt | date:'mediumDate') : 'Today' }}</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="glass-card profile-form-card">
+      <div class="form-card-header">
+        <h3>Edit Profile Details</h3>
+        <p class="subtext">Update your name or avatar image below</p>
+      </div>
+
+      <div *ngIf="successMessage()" class="alert-box alert-success">
+        <i class="alert-icon">✓</i>
+        <span>{{ successMessage() }}</span>
+      </div>
+
+      <div *ngIf="errorMessage()" class="alert-box alert-error">
+        <i class="alert-icon">⚠</i>
+        <span>{{ errorMessage() }}</span>
+      </div>
+
+      <form (ngSubmit)="onSave()" class="profile-form">
+        <div class="form-group">
+          <label for="displayName" class="form-label">Full Name</label>
+          <div class="input-wrapper">
+            <i class="input-icon icon-user" title="Name"></i>
+            <input
+              id="displayName"
+              type="text"
+              [ngModel]="nameInput()"
+              (ngModelChange)="nameInput.set($event)"
+              name="name"
+              class="form-input"
+              placeholder="Your full name"
+              required
+            />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <div class="label-with-hint">
+            <label class="form-label">Email Address</label>
+            <span class="field-hint">Primary login identifier (cannot be changed)</span>
+          </div>
+          <div class="input-wrapper readonly">
+            <i class="input-icon icon-email" title="Email"></i>
+            <input
+              type="email"
+              [value]="u.email"
+              class="form-input"
+              disabled
+            />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="profileImage" class="form-label">Profile Image URL</label>
+          <div class="input-wrapper">
+            <i class="input-icon icon-image" title="Image"></i>
+            <input
+              id="profileImage"
+              type="url"
+              [ngModel]="imageUrlInput()"
+              (ngModelChange)="imageUrlInput.set($event)"
+              name="profileImage"
+              class="form-input"
+              placeholder="https://example.com/your-avatar.jpg"
+            />
+            <button *ngIf="imageUrlInput()" type="button" (click)="clearAvatar()" class="clear-btn" title="Remove custom avatar">
+              <span class="icon-close">✕</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="preset-section">
+          <span class="form-label">Or Choose from Curated Avatars:</span>
+          <div class="preset-grid">
+            <button
+              type="button"
+              *ngFor="let avatar of presetAvatars"
+              (click)="selectAvatar(avatar)"
+              class="preset-item"
+              [class.active]="imageUrlInput() === avatar"
+            >
+              <img [src]="avatar" alt="Avatar preset" />
+            </button>
+          </div>
+        </div>
+
+        <div class="form-actions">
+          <button type="submit" class="btn btn-primary" [disabled]="isSaving()">
+            <span *ngIf="isSaving()" class="loader-spinner"></span>
+            <span>{{ isSaving() ? 'Saving Changes...' : 'Save Profile Changes' }}</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
