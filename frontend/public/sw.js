@@ -1,5 +1,5 @@
-// Service Worker for PulseChat PWA & Push Notifications (Phases 14 & 15)
-const CACHE_NAME = 'pulsechat-shell-v2';
+// Service Worker for ChatNest PWA & Push Notifications
+const CACHE_NAME = 'chatnest-shell-v2';
 const STATIC_ASSETS = [
   '/',
   '/index.html',

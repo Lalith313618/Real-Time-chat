@@ -6,13 +6,71 @@
   </div>
 
   <div class="profile-layout" *ngIf="user() as u">
+    <!-- Left Card: Profile Avatar & Preview -->
     <div class="glass-card profile-preview-card">
-      <div class="preview-avatar-wrapper">
+      <div 
+        class="preview-avatar-wrapper" 
+        (click)="triggerFileInput(fileInputLeft)"
+        title="Click to upload a new photo"
+        role="button"
+        tabindex="0"
+      >
         <div *ngIf="!imageUrlInput()" class="preview-avatar-circle">
           {{ (nameInput() || u.name).charAt(0).toUpperCase() }}
         </div>
         <img *ngIf="imageUrlInput()" [src]="imageUrlInput()" [alt]="nameInput()" class="preview-avatar-img" />
         <span class="status-indicator-badge" [class.online]="u.isOnline"></span>
+
+        <!-- Hover Camera Overlay -->
+        <div class="avatar-hover-overlay">
+          <img src="/icons/camera.svg" class="icon-img-sm" alt="Camera" />
+          <span>Upload</span>
+        </div>
+      </div>
+
+      <!-- Hidden file input for avatar trigger -->
+      <input
+        #fileInputLeft
+        type="file"
+        accept="image/png, image/jpeg, image/jpg, image/webp, image/gif, image/svg+xml"
+        (change)="onFileSelected($event)"
+        style="display: none"
+      />
+
+      <!-- Quick action buttons -->
+      <div class="avatar-quick-actions">
+        <button 
+          type="button" 
+          (click)="triggerFileInput(fileInputLeft)" 
+          class="btn btn-secondary btn-sm upload-quick-btn"
+          title="Upload new image file"
+        >
+          <img src="/icons/upload.svg" class="icon-img-sm" alt="Upload" />
+          <span>Upload</span>
+        </button>
+
+        <button 
+          *ngIf="imageUrlInput()" 
+          type="button" 
+          (click)="openAdjustModal()" 
+          class="btn btn-secondary btn-sm adjust-quick-btn"
+          title="Manually adjust, zoom and crop current photo"
+        >
+          <img src="/icons/edit.svg" class="icon-img-sm" alt="Adjust" />
+          <span>Adjust</span>
+        </button>
+
+        <button 
+          *ngIf="imageUrlInput()" 
+          type="button" 
+          (click)="removeAvatar()" 
+          class="btn btn-secondary btn-sm remove-avatar-btn"
+          title="Permanently remove profile image"
+          [disabled]="isSaving()"
+        >
+          <img src="/icons/trash.svg" class="icon-img-sm" alt="Remove" />
+          <span>Remove</span>
+        </button>
       </div>
 
       <h3 class="preview-name">{{ nameInput() || u.name }}</h3>
@@ -36,10 +94,11 @@
       </div>
     </div>
 
+    <!-- Right Card: Edit Form -->
     <div class="glass-card profile-form-card">
       <div class="form-card-header">
         <h3>Edit Profile Details</h3>
-        <p class="subtext">Update your name or avatar image below</p>
+        <p class="subtext">Upload and manually adjust your custom photo or update your display name</p>
       </div>
 
       <div *ngIf="successMessage()" class="alert-box alert-success">
@@ -53,6 +112,7 @@
       </div>
 
       <form (ngSubmit)="onSave()" class="profile-form">
+        <!-- Full Name -->
         <div class="form-group">
           <label for="displayName" class="form-label">Full Name</label>
           <div class="input-wrapper">
@@ -70,6 +130,7 @@
           </div>
         </div>
 
+        <!-- Email Address -->
         <div class="form-group">
           <div class="label-with-hint">
             <label class="form-label">Email Address</label>
@@ -86,25 +147,82 @@
           </div>
         </div>
 
-        <div class="form-group">
-          <label for="profileImage" class="form-label">Profile Image URL</label>
-          <div class="input-wrapper">
+        <!-- Profile Image Upload Box -->
+        <div class="form-group avatar-upload-group">
+          <div class="label-with-hint">
+            <label class="form-label">Profile Picture</label>
+            <span class="field-hint">Upload custom image with manual adjust, crop & zoom</span>
+          </div>
+
+          <!-- Dropzone -->
+          <div 
+            class="avatar-dropzone" 
+            [class.dragging]="isDragging()"
+            (dragover)="onDragOver($event)"
+            (dragleave)="onDragLeave($event)"
+            (drop)="onDrop($event)"
+            (click)="triggerFileInput(fileInputForm)"
+          >
+            <input
+              #fileInputForm
+              type="file"
+              accept="image/png, image/jpeg, image/jpg, image/webp, image/gif, image/svg+xml"
+              (change)="onFileSelected($event)"
+              style="display: none"
+            />
+
+            <!-- Empty / Ready Dropzone State -->
+            <div class="dropzone-idle">
+              <div class="dropzone-icon-circle">
+                <img src="/icons/camera.svg" class="icon-img-lg" alt="Upload" />
+              </div>
+              <div class="dropzone-text">
+                <p class="dropzone-title">
+                  <span class="highlight-link">Choose a photo</span> or drag & drop here
+                </p>
+                <p class="dropzone-hint">PNG, JPG, WEBP, or GIF (max 10MB) • Opens manual crop & adjust</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Secondary Action Bar -->
+          <div class="avatar-secondary-row">
+            <button 
+              *ngIf="imageUrlInput()" 
+              type="button" 
+              class="text-link-btn" 
+              (click)="openAdjustModal()"
+            >
+              ✎ Adjust Current Photo
+            </button>
+            <button 
+              type="button" 
+              class="url-toggle-btn" 
+              (click)="toggleUrlInput()"
+            >
+              {{ showUrlInput() ? '▾ Hide Image URL input' : '▸ Or paste an Image URL' }}
+            </button>
+          </div>
+
+          <!-- Optional manual URL input -->
+          <div *ngIf="showUrlInput()" class="input-wrapper url-input-box">
             <i class="input-icon icon-image" title="Image"></i>
             <input
               id="profileImage"
               type="url"
               [ngModel]="imageUrlInput()"
-              (ngModelChange)="imageUrlInput.set($event)"
+              (ngModelChange)="imageUrlInput.set($event); selectedFile.set(null)"
               name="profileImage"
               class="form-input"
               placeholder="https://example.com/your-avatar.jpg"
             />
-            <button *ngIf="imageUrlInput()" type="button" (click)="clearAvatar()" class="clear-btn" title="Remove custom avatar">
+            <button *ngIf="imageUrlInput()" type="button" (click)="removeAvatar()" class="clear-btn" title="Remove custom avatar">
               <span class="icon-close">✕</span>
             </button>
           </div>
         </div>
 
+        <!-- Curated Preset Avatars -->
         <div class="preset-section">
           <span class="form-label">Or Choose from Curated Avatars:</span>
           <div class="preset-grid">
@@ -113,7 +231,8 @@
               *ngFor="let avatar of presetAvatars"
               (click)="selectAvatar(avatar)"
               class="preset-item"
-              [class.active]="imageUrlInput() === avatar"
+              [class.active]="imageUrlInput() === avatar && !selectedFile()"
+              title="Select avatar preset"
             >
               <img [src]="avatar" alt="Avatar preset" />
             </button>
@@ -127,6 +246,84 @@
           </button>
         </div>
       </form>
+    </div>
+  </div>
+
+  <!-- Manual Crop & Adjust Modal -->
+  <div *ngIf="isAdjustModalOpen()" class="modal-backdrop" (click)="closeAdjustModal()">
+    <div class="modal-card glass-card adjust-modal" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <div>
+          <h3 class="modal-title">Adjust Profile Picture</h3>
+          <p class="modal-desc">Drag to reposition, use the slider to zoom, and rotate to fit your profile</p>
+        </div>
+        <button type="button" class="modal-close-btn" (click)="closeAdjustModal()" title="Close">✕</button>
+      </div>
+
+      <div class="modal-body">
+        <!-- Interactive Canvas Viewport -->
+        <div 
+          class="canvas-viewport" 
+          [class.grabbing]="isDraggingCanvas()"
+          (mousedown)="startDrag($event)"
+          (mousemove)="onDrag($event)"
+          (mouseup)="endDrag()"
+          (mouseleave)="endDrag()"
+          (touchstart)="startDrag($event)"
+          (touchmove)="onDrag($event)"
+          (touchend)="endDrag()"
+          (wheel)="onWheel($event)"
+        >
+          <canvas #cropCanvas width="320" height="320" class="crop-canvas"></canvas>
+          <div class="drag-hint-badge">
+            <span>Drag image to position</span>
+          </div>
+        </div>
+
+        <!-- Zoom & Adjustment Controls -->
+        <div class="adjust-controls">
+          <div class="zoom-row">
+            <span class="control-label">Zoom</span>
+            <button type="button" class="ctrl-btn-round" (click)="zoomOut()" title="Zoom out" [disabled]="zoomLevel() <= 1">−</button>
+            <input 
+              type="range" 
+              min="1" 
+              max="3" 
+              step="0.05" 
+              [value]="zoomLevel()" 
+              (input)="onZoomChange($event)"
+              class="zoom-slider" 
+            />
+            <button type="button" class="ctrl-btn-round" (click)="zoomIn()" title="Zoom in" [disabled]="zoomLevel() >= 3">+</button>
+            <span class="zoom-value">{{ (zoomLevel() * 100).toFixed(0) }}%</span>
+          </div>
+
+          <div class="tool-actions-row">
+            <button type="button" class="btn btn-secondary btn-sm tool-btn" (click)="rotateClockwise()" title="Rotate 90° clockwise">
+              <img src="/icons/rotate.svg" class="icon-img-sm" alt="Rotate" />
+              <span>Rotate 90°</span>
+            </button>
+            <button type="button" class="btn btn-secondary btn-sm tool-btn" (click)="resetAdjustment()" title="Reset position and zoom">
+              <span>Reset</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" (click)="closeAdjustModal()" [disabled]="isUploadingAdjusted()">
+          Cancel
+        </button>
+        <button 
+          type="button" 
+          class="btn btn-primary" 
+          (click)="applyAndUploadAdjustedAvatar()" 
+          [disabled]="isUploadingAdjusted()"
+        >
+          <span *ngIf="isUploadingAdjusted()" class="loader-spinner"></span>
+          <span>{{ isUploadingAdjusted() ? 'Saving Photo...' : 'Apply & Save Photo' }}</span>
+        </button>
+      </div>
     </div>
   </div>
 </div>

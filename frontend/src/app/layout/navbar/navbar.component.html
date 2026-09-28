@@ -1,12 +1,12 @@
 <header class="app-header glass-card">
   <div class="header-left">
     <div class="brand">
-      <a routerLink="/" class="brand-link" title="PulseChat - Real-Time Messaging">
+      <a routerLink="/" class="brand-link" title="ChatNest - Real-Time Messaging">
         <div class="brand-logo">
-          <img src="/icons/chat.svg" class="icon-img" alt="PulseChat" />
+          <img src="/icons/chat.svg" class="icon-img" alt="ChatNest" />
         </div>
         <div>
-          <h1 class="brand-title">PulseChat</h1>
+          <h1 class="brand-title">ChatNest</h1>
           <p class="brand-subtitle">Real-Time Messaging Platform</p>
         </div>
       </a>
@@ -47,9 +47,9 @@
     <div class="user-session-nav">
       <ng-container *ngIf="!authService.isLoggedIn()">
         <a
+          *ngIf="isAuthPage()"
           routerLink="/"
           class="btn btn-secondary btn-sm nav-home-btn"
-          [class.active]="currentPath() === '/'"
           title="Back to Landing Page"
         >
           <img src="/icons/home.svg" class="icon-img-sm" alt="Home" />

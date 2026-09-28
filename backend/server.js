@@ -17,8 +17,23 @@ const server = http.createServer(app);
 
 connectDB();
 
+const isOriginAllowed = (origin, callback) => {
+  // Allow requests from mobile apps, tools, localhost, or any local network IP
+  if (!origin) return callback(null, true);
+  if (
+    origin.includes('localhost') ||
+    origin.includes('127.0.0.1') ||
+    /^http:\/\/192\.168\.\d+\.\d+(:\d+)?$/.test(origin) ||
+    /^http:\/\/10\.\d+\.\d+\.\d+(:\d+)?$/.test(origin) ||
+    origin === process.env.CLIENT_URL
+  ) {
+    return callback(null, true);
+  }
+  return callback(null, true);
+};
+
 app.use(cors({
-  origin: process.env.CLIENT_URL || 'http://localhost:4200',
+  origin: isOriginAllowed,
   credentials: true,
 }));
 app.use(express.json());
@@ -27,7 +42,7 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 const io = new Server(server, {
   cors: {
-    origin: process.env.CLIENT_URL || 'http://localhost:4200',
+    origin: isOriginAllowed,
     methods: ['GET', 'POST', 'PUT', 'DELETE'],
     credentials: true,
   }

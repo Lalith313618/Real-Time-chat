@@ -1,96 +1,107 @@
 <header class="chat-topbar" *ngIf="activeConversation">
-  <button
-    type="button"
-    (click)="onBack()"
-    class="mobile-back-btn btn btn-secondary btn-icon"
-    title="Back to conversations"
-    aria-label="Back to conversations"
-  >
-    <img src="/icons/back.svg" class="icon-img" alt="Back" />
-  </button>
+  <div class="chat-header-main">
+    <button
+      type="button"
+      (click)="onBack()"
+      class="mobile-back-btn btn-back-circle"
+      title="Back to conversations"
+      aria-label="Back to conversations"
+    >
+      <img src="/icons/back.svg" class="icon-img" alt="Back" />
+    </button>
 
-  <ng-container *ngIf="!activeConversation.isGroup && getOtherParticipant(activeConversation) as other">
-    <div class="chat-recipient-info">
-      <div class="recipient-avatar-wrapper">
-        <div *ngIf="!other.profileImage" class="recipient-avatar-circle">
-          {{ other.name.charAt(0).toUpperCase() }}
+    <ng-container *ngIf="!activeConversation.isGroup && getOtherParticipant(activeConversation) as other">
+      <div class="chat-recipient-info">
+        <div class="recipient-avatar-wrapper">
+          <div *ngIf="!other.profileImage" class="recipient-avatar-circle">
+            {{ other.name.charAt(0).toUpperCase() }}
+          </div>
+          <img *ngIf="other.profileImage" [src]="other.profileImage" [alt]="other.name" class="recipient-avatar-img" />
+          <span class="status-indicator-badge" [class.online]="isParticipantOnline(other)"></span>
         </div>
-        <img *ngIf="other.profileImage" [src]="other.profileImage" [alt]="other.name" class="recipient-avatar-img" />
-        <span class="status-indicator-badge" [class.online]="isParticipantOnline(other)"></span>
+        <div class="recipient-meta">
+          <h3 class="recipient-name">{{ other.name }}</h3>
+          <span class="recipient-status">
+            <ng-container *ngIf="typingIndicatorText; else presenceStatus">
+              <span class="typing-header-text">{{ typingIndicatorText }}</span>
+            </ng-container>
+            <ng-template #presenceStatus>
+              <span class="dot" [class.online]="isParticipantOnline(other)"></span>
+              <span class="status-label">{{ isParticipantOnline(other) ? 'Online' : formatLastSeen(getParticipantLastSeen(other)) }}</span>
+            </ng-template>
+          </span>
+        </div>
       </div>
-      <div class="recipient-meta">
-        <h3 class="recipient-name">{{ other.name }}</h3>
-        <span class="recipient-status">
-          <ng-container *ngIf="typingIndicatorText; else presenceStatus">
-            <span class="typing-header-text">{{ typingIndicatorText }}</span>
-          </ng-container>
-          <ng-template #presenceStatus>
-            <span class="dot" [class.online]="isParticipantOnline(other)"></span>
-            {{ isParticipantOnline(other) ? 'Online' : formatLastSeen(getParticipantLastSeen(other)) }}
-          </ng-template>
-        </span>
-      </div>
-    </div>
-  </ng-container>
+    </ng-container>
 
-  <ng-container *ngIf="activeConversation.isGroup">
-    <div class="chat-recipient-info group-header-info" (click)="onOpenGroupInfo()" title="Click to view group details">
-      <div class="recipient-avatar-wrapper group-avatar">
-        <div class="recipient-avatar-circle group-badge">
-          <img src="/icons/group.svg" class="icon-img" alt="Group" />
+    <ng-container *ngIf="activeConversation.isGroup">
+      <div class="chat-recipient-info group-header-info" (click)="onOpenGroupInfo()" title="Click to view group details">
+        <div class="recipient-avatar-wrapper group-avatar">
+          <div class="recipient-avatar-circle group-badge">
+            <img src="/icons/group.svg" class="icon-img" alt="Group" />
+          </div>
+        </div>
+        <div class="recipient-meta">
+          <div class="group-title-badge-row">
+            <h3 class="recipient-name">{{ activeConversation.groupName || 'Group Chat' }}</h3>
+            <span *ngIf="isCurrentUserAdmin(activeConversation)" class="admin-chip">Admin</span>
+          </div>
+          <span class="recipient-status">
+            <ng-container *ngIf="typingIndicatorText; else groupMetaCount">
+              <span class="typing-header-text">{{ typingIndicatorText }}</span>
+            </ng-container>
+            <ng-template #groupMetaCount>
+              <span class="members-subtitle">{{ activeConversation.participants.length }} members</span>
+            </ng-template>
+          </span>
         </div>
       </div>
-      <div class="recipient-meta">
-        <div class="group-title-badge-row">
-          <h3 class="recipient-name">{{ activeConversation.groupName || 'Group Chat' }}</h3>
-          <span *ngIf="isCurrentUserAdmin(activeConversation)" class="admin-chip">Admin</span>
-        </div>
-        <span class="recipient-status">
-          <ng-container *ngIf="typingIndicatorText; else groupMetaCount">
-            <span class="typing-header-text">{{ typingIndicatorText }}</span>
-          </ng-container>
-          <ng-template #groupMetaCount>
-            <span class="members-subtitle">{{ activeConversation.participants.length }} members • Tap for details</span>
-          </ng-template>
-        </span>
-      </div>
-    </div>
-  </ng-container>
+    </ng-container>
+  </div>
 
   <div class="chat-topbar-actions">
     <button
       (click)="onToggleSearch()"
-      class="btn btn-secondary btn-sm"
+      class="btn btn-secondary btn-sm action-btn"
       [class.active]="isSearchOpen"
       title="Search in conversation"
+      aria-label="Search"
     >
       <img src="/icons/search.svg" class="icon-img-sm" alt="Search" />
-      Search
+      <span class="btn-text">Search</span>
     </button>
 
     <button
       (click)="clearChat.emit()"
-      class="btn btn-secondary btn-sm btn-clear-chat"
+      class="btn btn-secondary btn-sm action-btn btn-clear-chat"
       title="Clear all messages in this conversation"
+      aria-label="Clear Chat"
     >
       <img src="/icons/trash.svg" class="icon-img-sm" alt="Clear Chat" />
-      Clear Chat
+      <span class="btn-text">Clear Chat</span>
     </button>
 
     <button
       *ngIf="activeConversation.isGroup"
       (click)="onOpenGroupInfo()"
-      class="btn btn-secondary btn-sm"
+      class="btn btn-secondary btn-sm action-btn"
       [class.active]="isGroupInfoOpen"
       title="Group Information & Settings"
+      aria-label="Group Info"
     >
       <img src="/icons/info.svg" class="icon-img-sm" alt="Group Info" />
-      Group Info
+      <span class="btn-text">Group Info</span>
     </button>
 
-    <a *ngIf="!activeConversation.isGroup" [routerLink]="['/users/search']" class="btn btn-secondary btn-sm" title="View in Directory">
+    <a
+      *ngIf="!activeConversation.isGroup"
+      [routerLink]="['/users/search']"
+      class="btn btn-secondary btn-sm action-btn"
+      title="View in Directory"
+      aria-label="Profile"
+    >
       <img src="/icons/user.svg" class="icon-img-sm" alt="Profile" />
-      Profile
+      <span class="btn-text">Profile</span>
     </a>
   </div>
 </header>

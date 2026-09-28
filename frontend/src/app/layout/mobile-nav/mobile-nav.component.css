@@ -1,3 +1,7 @@
+:host {
+  display: block;
+}
+
 .mobile-bottom-nav {
   display: none;
 }
@@ -9,8 +13,9 @@
     bottom: 0;
     left: 0;
     right: 0;
-    height: 64px;
-    background: rgba(255, 253, 248, 0.96);
+    height: calc(60px + env(safe-area-inset-bottom, 0px));
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    background: rgba(255, 253, 248, 0.98);
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
     border-top: 1px solid var(--border-subtle);
@@ -18,7 +23,8 @@
     z-index: 1000;
     align-items: center;
     justify-content: space-around;
-    padding: 0 0.5rem;
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
     box-shadow: 0 -4px 20px rgba(43, 35, 23, 0.06);
   }
 

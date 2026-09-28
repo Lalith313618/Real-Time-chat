@@ -1,8 +1,6 @@
 const User = require('../models/user.model');
+const { uploadFile } = require('../config/cloudinary');
 
-// @desc    Search users by name or email
-// @route   GET /api/users/search?q=...
-// @access  Private (JWT Protected)
 const searchUsers = async (req, res) => {
   try {
     const query = req.query.q ? req.query.q.trim() : '';
@@ -15,10 +13,8 @@ const searchUsers = async (req, res) => {
       });
     }
 
-    // Escape regex special characters to prevent ReDoS
     const sanitizedQuery = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
-    // Search users matching name or email, excluding the requesting user
     const users = await User.find({
       _id: { $ne: req.user._id },
       $or: [
@@ -93,8 +89,8 @@ const updateProfile = async (req, res) => {
       user.name = name.trim();
     }
 
-    if (typeof profileImage === 'string') {
-      user.profileImage = profileImage.trim();
+    if (profileImage !== undefined) {
+      user.profileImage = typeof profileImage === 'string' ? profileImage.trim() : '';
     }
 
     const updatedUser = await user.save();
@@ -216,10 +212,111 @@ const updateNotificationSettings = async (req, res) => {
   }
 };
 
+// @desc    Upload avatar image & update profile for current user
+// @route   POST /api/users/avatar
+// @access  Private (JWT Protected)
+const uploadAvatar = async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({
+        status: 'fail',
+        message: 'No image file uploaded',
+      });
+    }
+
+    if (!req.file.mimetype || !req.file.mimetype.startsWith('image/')) {
+      return res.status(400).json({
+        status: 'fail',
+        message: 'Please upload a valid image file (JPEG, PNG, WEBP, GIF, SVG)',
+      });
+    }
+
+    const result = await uploadFile(req.file.buffer, {
+      folder: 'chat_app/avatars',
+      originalname: req.file.originalname,
+      mimetype: req.file.mimetype,
+    });
+
+    const user = await User.findById(req.user._id);
+    if (!user) {
+      return res.status(404).json({
+        status: 'fail',
+        message: 'User not found',
+      });
+    }
+
+    user.profileImage = result.fileUrl;
+    const updatedUser = await user.save();
+
+    return res.status(200).json({
+      status: 'success',
+      message: 'Avatar uploaded and profile updated successfully',
+      fileUrl: result.fileUrl,
+      user: {
+        _id: updatedUser._id,
+        name: updatedUser.name,
+        email: updatedUser.email,
+        profileImage: updatedUser.profileImage,
+        isOnline: updatedUser.isOnline,
+        lastSeen: updatedUser.lastSeen,
+        createdAt: updatedUser.createdAt,
+        updatedAt: updatedUser.updatedAt,
+      },
+    });
+  } catch (error) {
+    console.error('[Upload Avatar Error]:', error);
+    return res.status(500).json({
+      status: 'error',
+      message: error.message || 'Error uploading avatar',
+    });
+  }
+};
+
+// @desc    Remove avatar for current user
+// @route   DELETE /api/users/avatar
+// @access  Private (JWT Protected)
+const removeAvatar = async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id);
+    if (!user) {
+      return res.status(404).json({
+        status: 'fail',
+        message: 'User not found',
+      });
+    }
+
+    user.profileImage = '';
+    const updatedUser = await user.save();
+
+    return res.status(200).json({
+      status: 'success',
+      message: 'Profile picture removed successfully',
+      user: {
+        _id: updatedUser._id,
+        name: updatedUser.name,
+        email: updatedUser.email,
+        profileImage: '',
+        isOnline: updatedUser.isOnline,
+        lastSeen: updatedUser.lastSeen,
+        createdAt: updatedUser.createdAt,
+        updatedAt: updatedUser.updatedAt,
+      },
+    });
+  } catch (error) {
+    console.error('[Remove Avatar Error]:', error);
+    return res.status(500).json({
+      status: 'error',
+      message: error.message || 'Error removing avatar',
+    });
+  }
+};
+
 module.exports = {
   searchUsers,
   getUserProfile,
   updateProfile,
+  uploadAvatar,
+  removeAvatar,
   getAllUsers,
   getNotificationSettings,
   updateNotificationSettings,

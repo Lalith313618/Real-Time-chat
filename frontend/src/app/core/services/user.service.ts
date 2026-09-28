@@ -20,12 +20,33 @@ export interface UpdateProfileDto {
   profileImage?: string;
 }
 
+export interface UploadAvatarResponse {
+  status: string;
+  message: string;
+  fileUrl: string;
+  user: User;
+}
+
 @Injectable({
   providedIn: 'root'
 })
 export class UserService {
   private readonly http = inject(HttpClient);
   private readonly apiUrl = `${environment.apiUrl}/users`;
+
+  uploadAvatar(file: File | Blob): Observable<{ user: User; fileUrl: string }> {
+    const formData = new FormData();
+    formData.append('avatar', file, 'avatar.jpg');
+    return this.http
+      .post<UploadAvatarResponse>(`${this.apiUrl}/avatar`, formData)
+      .pipe(map((res) => ({ user: res.user, fileUrl: res.fileUrl })));
+  }
+
+  removeAvatar(): Observable<User> {
+    return this.http
+      .delete<UserProfileResponse>(`${this.apiUrl}/avatar`)
+      .pipe(map((res) => res.user));
+  }
 
   searchUsers(query: string): Observable<User[]> {
     return this.http

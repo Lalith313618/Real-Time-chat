@@ -1,4 +1,4 @@
-import { Component, inject, signal, OnInit, OnDestroy } from '@angular/core';
+import { Component, inject, signal, computed, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink, Router, NavigationEnd } from '@angular/router';
 import { Subscription, filter } from 'rxjs';
@@ -22,15 +22,23 @@ export class NavbarComponent implements OnInit, OnDestroy {
   currentPath = signal<string>('/');
   socketConnected = signal<boolean>(false);
 
+  // Show home button ONLY on login and signup pages, never on landing page
+  readonly isAuthPage = computed(() => {
+    const path = this.currentPath();
+    return path.startsWith('/auth/login') || path.startsWith('/auth/register');
+  });
+
   private sub = new Subscription();
 
   ngOnInit(): void {
-    this.currentPath.set(this.router.url.split('?')[0]);
+    this.syncCurrentPath();
+
     this.sub.add(
       this.router.events
         .pipe(filter((event): event is NavigationEnd => event instanceof NavigationEnd))
         .subscribe((event) => {
-          this.currentPath.set(event.urlAfterRedirects.split('?')[0]);
+          const path = (event.urlAfterRedirects || event.url || '/').split('?')[0].split('#')[0];
+          this.currentPath.set(path);
         })
     );
 
@@ -39,6 +47,16 @@ export class NavbarComponent implements OnInit, OnDestroy {
         this.socketConnected.set(connected);
       })
     );
+  }
+
+  private syncCurrentPath(): void {
+    let path = '/';
+    if (typeof window !== 'undefined' && window.location?.pathname) {
+      path = window.location.pathname;
+    } else if (this.router.url) {
+      path = this.router.url;
+    }
+    this.currentPath.set(path.split('?')[0].split('#')[0]);
   }
 
   logout(): void {

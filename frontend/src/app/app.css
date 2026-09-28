@@ -18,10 +18,10 @@
 
 @media (max-width: 768px) {
   .app-layout {
-    padding-bottom: 74px; /* Space for fixed mobile bottom nav */
+    padding-bottom: calc(64px + env(safe-area-inset-bottom, 0px)); /* Space for fixed mobile bottom nav */
   }
 
   .main-content {
-    padding: 68px 0.5rem 1rem;
+    padding: calc(60px + env(safe-area-inset-top, 0px)) 0.75rem 1rem;
   }
 }

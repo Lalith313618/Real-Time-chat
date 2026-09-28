@@ -198,8 +198,8 @@
     top: 0;
     left: 0;
     right: 0;
-    bottom: 64px;
-    z-index: 500;
+    bottom: calc(60px + env(safe-area-inset-bottom, 0px));
+    z-index: 1050;
     height: auto;
   }
 }
