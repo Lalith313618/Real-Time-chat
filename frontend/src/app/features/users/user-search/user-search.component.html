@@ -1,7 +1,6 @@
 <div class="user-search-container">
   <div class="page-header">
     <div>
-      <span class="pill-tag">Directory & Discovery</span>
       <h2 class="page-title">Find Users</h2>
       <p class="page-subtitle">Search for registered users by name or email to start real-time conversations</p>
     </div>
@@ -22,7 +21,7 @@
         type="text"
         [ngModel]="searchQuery()"
         (ngModelChange)="onSearchChange($event)"
-        placeholder="Type a name or email address (e.g. Jordan, alice@example.com)..."
+        placeholder="Type a name or email address"
         class="search-input"
         autocomplete="off"
       />

@@ -9,12 +9,11 @@ import { User } from './core/models/user.model';
 import { NetworkService } from './core/services/network.service';
 
 import { NavbarComponent } from './layout/navbar/navbar.component';
-import { MobileNavComponent } from './layout/mobile-nav/mobile-nav.component';
 
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [CommonModule, RouterOutlet, NavbarComponent, MobileNavComponent],
+  imports: [CommonModule, RouterOutlet, NavbarComponent],
   templateUrl: './app.html',
   styleUrl: './app.css'
 })

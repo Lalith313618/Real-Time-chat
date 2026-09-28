@@ -9,20 +9,6 @@
   margin-bottom: 0.5rem;
 }
 
-.pill-tag {
-  display: inline-block;
-  padding: 0.3rem 0.85rem;
-  border-radius: var(--radius-full);
-  font-size: 0.72rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  background: #FFF5B8;
-  color: #725615;
-  border: 1px solid rgba(204, 162, 90, 0.45);
-  margin-bottom: 0.75rem;
-}
-
 .page-title {
   font-size: 2.1rem;
   font-weight: 800;
