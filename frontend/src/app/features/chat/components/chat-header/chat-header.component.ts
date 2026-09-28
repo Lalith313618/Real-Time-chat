@@ -1,6 +1,5 @@
 import { Component, Input, Output, EventEmitter, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterLink } from '@angular/router';
 import { Conversation } from '../../../../core/models/conversation.model';
 import { User } from '../../../../core/models/user.model';
 import { AuthService } from '../../../../core/services/auth.service';
@@ -11,7 +10,7 @@ import { MediaUrlPipe } from '../../../../core/pipes/media-url.pipe';
 @Component({
   selector: 'app-chat-header',
   standalone: true,
-  imports: [CommonModule, RouterLink, MediaUrlPipe],
+  imports: [CommonModule, MediaUrlPipe],
   templateUrl: './chat-header.component.html',
   styleUrl: './chat-header.component.css'
 })
@@ -26,10 +25,12 @@ export class ChatHeaderComponent {
   @Input() typingIndicatorText = '';
   @Input() isSearchOpen = false;
   @Input() isGroupInfoOpen = false;
+  @Input() isUserProfileOpen = false;
   @Input() lastSeenMap: Record<string, string | Date> = {};
 
   @Output() back = new EventEmitter<void>();
   @Output() openGroupInfo = new EventEmitter<void>();
+  @Output() openUserProfile = new EventEmitter<void>();
   @Output() toggleSearch = new EventEmitter<void>();
   @Output() clearChat = new EventEmitter<void>();
 
@@ -82,6 +83,10 @@ export class ChatHeaderComponent {
 
   onOpenGroupInfo(): void {
     this.openGroupInfo.emit();
+  }
+
+  onOpenUserProfile(): void {
+    this.openUserProfile.emit();
   }
 
   onToggleSearch(): void {

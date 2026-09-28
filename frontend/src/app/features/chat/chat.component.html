@@ -41,9 +41,11 @@
       [typingIndicatorText]="typingIndicatorText()"
       [isSearchOpen]="isSearchOpen()"
       [isGroupInfoOpen]="isGroupInfoOpen()"
+      [isUserProfileOpen]="isUserProfileOpen()"
       [lastSeenMap]="lastSeenMap()"
       (back)="deselectConversation()"
       (openGroupInfo)="openGroupInfo()"
+      (openUserProfile)="openUserProfile()"
       (toggleSearch)="toggleSearch()"
       (clearChat)="clearChatHistory()"
     ></app-chat-header>
@@ -142,6 +144,16 @@
   (removeMember)="removeMember($event)"
   (leaveGroup)="leaveCurrentGroup()"
 ></app-group-info-drawer>
+
+<app-user-info-drawer
+  [isOpen]="isUserProfileOpen()"
+  [user]="getDirectRecipient()"
+  [isOnline]="isParticipantOnline(getDirectRecipient())"
+  [lastSeen]="getParticipantLastSeen(getDirectRecipient())"
+  (close)="closeUserProfile()"
+  (startSearch)="toggleSearch()"
+  (clearChat)="clearChatHistory()"
+></app-user-info-drawer>
 
 <app-image-lightbox
   [imageUrl]="previewLightboxImage()"

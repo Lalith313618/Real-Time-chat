@@ -54,14 +54,16 @@
   overflow: hidden;
 }
 
-.group-header-info {
+.group-header-info,
+.direct-header-info {
   cursor: pointer;
   padding: 0.25rem 0.5rem;
   border-radius: var(--radius-md, 0.5rem);
   transition: background 0.15s ease;
 }
 
-.group-header-info:hover {
+.group-header-info:hover,
+.direct-header-info:hover {
   background: var(--bg-tertiary, #F3EBD9);
 }
 

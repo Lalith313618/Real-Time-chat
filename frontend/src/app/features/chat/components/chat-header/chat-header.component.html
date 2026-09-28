@@ -11,7 +11,14 @@
     </button>
 
     <ng-container *ngIf="!activeConversation.isGroup && getOtherParticipant(activeConversation) as other">
-      <div class="chat-recipient-info">
+      <div
+        class="chat-recipient-info direct-header-info"
+        (click)="onOpenUserProfile()"
+        title="Click to view contact information"
+        role="button"
+        tabindex="0"
+        (keydown.enter)="onOpenUserProfile()"
+      >
         <div class="recipient-avatar-wrapper">
           <div *ngIf="!other.profileImage || recipientAvatarError" class="recipient-avatar-circle">
             {{ other.name.charAt(0).toUpperCase() }}
@@ -99,15 +106,17 @@
       <span class="btn-text">Group Info</span>
     </button>
 
-    <a
+    <button
       *ngIf="!activeConversation.isGroup"
-      [routerLink]="['/users/search']"
+      type="button"
+      (click)="onOpenUserProfile()"
       class="btn btn-secondary btn-sm action-btn"
-      title="View in Directory"
-      aria-label="Profile"
+      [class.active]="isUserProfileOpen"
+      title="Contact Information"
+      aria-label="Contact Information"
     >
       <img src="/icons/user.svg" class="icon-img-sm" alt="Profile" />
       <span class="btn-text">Profile</span>
-    </a>
+    </button>
   </div>
 </header>

@@ -147,8 +147,36 @@
             [class.receipt-read]="getMessageReceipt(msg) === 'read'"
             [title]="getMessageReceipt(msg)"
           >
-            <img *ngIf="getMessageReceipt(msg) === 'sent'" src="/icons/check.svg" class="icon-img-sm" alt="Sent" />
-            <img *ngIf="getMessageReceipt(msg) === 'delivered' || getMessageReceipt(msg) === 'read'" src="/icons/check-all.svg" class="icon-img-sm" alt="Delivered" />
+            <!-- Single tick for sent -->
+            <svg
+              *ngIf="getMessageReceipt(msg) === 'sent'"
+              class="receipt-icon single-tick"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2.6"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-label="Sent"
+            >
+              <polyline points="20 6 9 17 4 12"></polyline>
+            </svg>
+
+            <!-- Double tick for delivered and read -->
+            <svg
+              *ngIf="getMessageReceipt(msg) === 'delivered' || getMessageReceipt(msg) === 'read'"
+              class="receipt-icon double-tick"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2.6"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              [attr.aria-label]="getMessageReceipt(msg) === 'read' ? 'Read' : 'Delivered'"
+            >
+              <polyline points="18 6 7 17 2 12"></polyline>
+              <polyline points="22 10 13 19 10 16"></polyline>
+            </svg>
           </span>
         </div>
       </div>
