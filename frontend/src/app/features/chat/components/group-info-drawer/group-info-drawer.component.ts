@@ -6,11 +6,12 @@ import { User } from '../../../../core/models/user.model';
 import { AuthService } from '../../../../core/services/auth.service';
 
 import { SocketService } from '../../../../core/services/socket.service';
+import { MediaUrlPipe } from '../../../../core/pipes/media-url.pipe';
 
 @Component({
   selector: 'app-group-info-drawer',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, MediaUrlPipe],
   templateUrl: './group-info-drawer.component.html',
   styleUrl: './group-info-drawer.component.css'
 })

@@ -4,6 +4,7 @@ import { Observable, tap, map } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { Conversation } from '../models/conversation.model';
 import { User } from '../models/user.model';
+import { resolveMediaUrl } from '../utils/media-url.util';
 
 export interface ConversationResponse {
   status: string;
@@ -29,12 +30,36 @@ export class ConversationService {
   readonly activeConversation = signal<Conversation | null>(null);
   readonly isLoading = signal<boolean>(false);
 
+  normalizeConversation(c: Conversation): Conversation {
+    if (!c) return c;
+    return {
+      ...c,
+      groupImage: c.groupImage ? resolveMediaUrl(c.groupImage) : '',
+      participants: (c.participants || []).map((p) => {
+        if (typeof p === 'string') return p;
+        return {
+          ...p,
+          profileImage: p.profileImage ? resolveMediaUrl(p.profileImage) : ''
+        };
+      }),
+      groupAdmin: Array.isArray(c.groupAdmin)
+        ? c.groupAdmin.map((admin) => {
+            if (typeof admin === 'string') return admin;
+            return {
+              ...admin,
+              profileImage: admin.profileImage ? resolveMediaUrl(admin.profileImage) : ''
+            };
+          })
+        : c.groupAdmin
+    };
+  }
+
   getOrCreateConversation(participantId: string): Observable<Conversation> {
     this.isLoading.set(true);
     return this.http
       .post<ConversationResponse>(this.apiUrl, { participantId })
       .pipe(
-        map((res) => res.conversation),
+        map((res) => this.normalizeConversation(res.conversation)),
         tap((conversation) => {
           this.activeConversation.set(conversation);
           // Prepend or update in conversations list
@@ -55,7 +80,7 @@ export class ConversationService {
   getUserConversations(): Observable<Conversation[]> {
     this.isLoading.set(true);
     return this.http.get<ConversationListResponse>(this.apiUrl).pipe(
-      map((res) => res.conversations),
+      map((res) => (res.conversations || []).map((c) => this.normalizeConversation(c))),
       tap((conversations) => {
         this.conversations.set(conversations);
         this.isLoading.set(false);
@@ -67,7 +92,7 @@ export class ConversationService {
     return this.http
       .get<{ status: string; conversation: Conversation }>(`${this.apiUrl}/${id}`)
       .pipe(
-        map((res) => res.conversation),
+        map((res) => this.normalizeConversation(res.conversation)),
         tap((conversation) => {
           this.activeConversation.set(conversation);
         })
@@ -83,7 +108,7 @@ export class ConversationService {
     return this.http
       .post<{ status: string; conversation: Conversation }>(`${this.apiUrl}/group`, data)
       .pipe(
-        map((res) => res.conversation),
+        map((res) => this.normalizeConversation(res.conversation)),
         tap((conversation) => {
           this.conversations.update((list) => [conversation, ...list]);
           this.activeConversation.set(conversation);
@@ -99,7 +124,7 @@ export class ConversationService {
     return this.http
       .put<{ status: string; conversation: Conversation }>(`${this.apiUrl}/${id}/group`, data)
       .pipe(
-        map((res) => res.conversation),
+        map((res) => this.normalizeConversation(res.conversation)),
         tap((conversation) => {
           this.conversations.update((list) =>
             list.map((c) => (c._id === id ? conversation : c))
@@ -117,7 +142,7 @@ export class ConversationService {
         memberIds,
       })
       .pipe(
-        map((res) => res.conversation),
+        map((res) => this.normalizeConversation(res.conversation)),
         tap((conversation) => {
           this.conversations.update((list) =>
             list.map((c) => (c._id === id ? conversation : c))
@@ -136,7 +161,7 @@ export class ConversationService {
         { memberId }
       )
       .pipe(
-        map((res) => res.conversation),
+        map((res) => this.normalizeConversation(res.conversation)),
         tap((conversation) => {
           this.conversations.update((list) =>
             list.map((c) => (c._id === id ? conversation : c))
@@ -159,7 +184,7 @@ export class ConversationService {
         { memberId, action }
       )
       .pipe(
-        map((res) => res.conversation),
+        map((res) => this.normalizeConversation(res.conversation)),
         tap((conversation) => {
           this.conversations.update((list) =>
             list.map((c) => (c._id === id ? conversation : c))

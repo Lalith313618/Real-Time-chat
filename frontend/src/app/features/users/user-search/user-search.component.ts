@@ -7,11 +7,12 @@ import { UserService } from '../../../core/services/user.service';
 import { ConversationService } from '../../../core/services/conversation.service';
 import { User } from '../../../core/models/user.model';
 import { Conversation } from '../../../core/models/conversation.model';
+import { MediaUrlPipe } from '../../../core/pipes/media-url.pipe';
 
 @Component({
   selector: 'app-user-search',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, MediaUrlPipe],
   templateUrl: './user-search.component.html',
   styleUrl: './user-search.component.css'
 })

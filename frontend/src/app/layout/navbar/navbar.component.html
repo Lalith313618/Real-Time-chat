@@ -33,39 +33,39 @@
   </div>
 
   <div class="header-right">
-    <div class="header-badges">
-      <div *ngIf="!networkService.isOnline()" class="badge badge-warning offline-header-pill">
+    <div *ngIf="!networkService.isOnline()" class="header-badges">
+      <div class="badge badge-warning offline-header-pill">
         <span class="status-dot offline"></span>
         Offline
-      </div>
-      <div *ngIf="networkService.isOnline()" class="badge" [ngClass]="socketConnected() ? 'badge-success' : 'badge-warning'">
-        <span class="status-dot" [class.online]="socketConnected()"></span>
-        {{ socketConnected() ? 'Live' : 'Connecting...' }}
       </div>
     </div>
 
     <div class="user-session-nav">
       <ng-container *ngIf="!authService.isLoggedIn()">
-        <a
-          *ngIf="isAuthPage()"
-          routerLink="/"
-          class="btn btn-secondary btn-sm nav-home-btn"
-          title="Back to Landing Page"
-        >
+        <a *ngIf="isAuthPage()" routerLink="/" class="btn btn-secondary btn-sm nav-home-btn"
+          title="Back to Landing Page">
           <img src="/icons/home.svg" class="icon-img-sm" alt="Home" />
           <span>Home</span>
         </a>
 
-        <a routerLink="/auth/login" class="btn btn-secondary btn-sm" [class.btn-auth-current]="currentPath().startsWith('/auth/login')">Sign In</a>
-        <a routerLink="/auth/register" class="btn btn-primary btn-sm" [class.btn-auth-current]="currentPath().startsWith('/auth/register')">Create Account</a>
+        <a routerLink="/auth/login" class="btn btn-secondary btn-sm"
+          [class.btn-auth-current]="currentPath().startsWith('/auth/login')">Sign In</a>
+        <a routerLink="/auth/register" class="btn btn-primary btn-sm"
+          [class.btn-auth-current]="currentPath().startsWith('/auth/register')">Create Account</a>
       </ng-container>
 
       <ng-container *ngIf="authService.currentUser() as user">
         <a routerLink="/users/profile" class="user-profile-badge" title="Go to My Profile">
-          <div *ngIf="!user.profileImage" class="user-avatar-circle">
+          <div *ngIf="!user.profileImage || navbarAvatarFailed()" class="user-avatar-circle">
             {{ user.name.charAt(0).toUpperCase() }}
           </div>
-          <img *ngIf="user.profileImage" [src]="user.profileImage" [alt]="user.name" class="user-avatar-circle img" />
+          <img
+            *ngIf="user.profileImage && !navbarAvatarFailed()"
+            [src]="user.profileImage | mediaUrl"
+            [alt]="user.name"
+            class="user-avatar-circle img"
+            (error)="navbarAvatarFailed.set(true)"
+          />
           <div class="user-info-text">
             <span class="user-name">{{ user.name }}</span>
             <span class="user-status-text">

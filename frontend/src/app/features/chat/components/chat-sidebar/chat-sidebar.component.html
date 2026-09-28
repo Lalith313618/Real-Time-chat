@@ -78,10 +78,16 @@
 
       <ng-container *ngIf="!conv.isGroup && getOtherParticipant(conv) as other">
         <div class="conv-avatar-wrapper">
-          <div *ngIf="!other.profileImage" class="conv-avatar-circle">
+          <div *ngIf="!other.profileImage || avatarErrors[other._id]" class="conv-avatar-circle">
             {{ other.name.charAt(0).toUpperCase() }}
           </div>
-          <img *ngIf="other.profileImage" [src]="other.profileImage" [alt]="other.name" class="conv-avatar-img" />
+          <img
+            *ngIf="other.profileImage && !avatarErrors[other._id]"
+            [src]="other.profileImage | mediaUrl"
+            [alt]="other.name"
+            class="conv-avatar-img"
+            (error)="handleAvatarError(other._id)"
+          />
           <span class="conv-status-dot" [class.online]="isParticipantOnline(other)"></span>
         </div>
 

@@ -51,7 +51,7 @@
           <div *ngIf="!user.profileImage" class="avatar-circle">
             {{ user.name.charAt(0).toUpperCase() }}
           </div>
-          <img *ngIf="user.profileImage" [src]="user.profileImage" [alt]="user.name" class="avatar-img" />
+          <img *ngIf="user.profileImage" [src]="user.profileImage | mediaUrl" [alt]="user.name" class="avatar-img" />
           <span class="status-indicator-badge" [class.online]="user.isOnline" [title]="user.isOnline ? 'Online' : 'Offline'"></span>
         </div>
         <div class="user-main-info">
@@ -110,7 +110,7 @@
           <div *ngIf="!user.profileImage" class="modal-avatar-circle">
             {{ user.name.charAt(0).toUpperCase() }}
           </div>
-          <img *ngIf="user.profileImage" [src]="user.profileImage" [alt]="user.name" class="modal-avatar-img" />
+          <img *ngIf="user.profileImage" [src]="user.profileImage | mediaUrl" [alt]="user.name" class="modal-avatar-img" />
           <span class="status-indicator-badge large" [class.online]="user.isOnline"></span>
         </div>
         <h3 class="modal-name">{{ user.name }}</h3>

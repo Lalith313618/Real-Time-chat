@@ -23,7 +23,7 @@
       <div *ngIf="!getSenderAvatar(msg)" class="msg-avatar-circle">
         {{ getSenderName(msg).charAt(0).toUpperCase() }}
       </div>
-      <img *ngIf="getSenderAvatar(msg)" [src]="getSenderAvatar(msg)" [alt]="getSenderName(msg)" class="msg-avatar-img" />
+      <img *ngIf="getSenderAvatar(msg)" [src]="getSenderAvatar(msg) | mediaUrl" [alt]="getSenderName(msg)" class="msg-avatar-img" />
     </div>
 
     <div class="message-bubble-wrapper">
@@ -55,14 +55,14 @@
           (click)="openLightbox.emit(msg.fileUrl)"
           title="Click to view full image"
         >
-          <img [src]="msg.fileUrl" [alt]="msg.fileName || 'Image attachment'" class="msg-attached-image" loading="lazy" />
+          <img [src]="msg.fileUrl | mediaUrl" [alt]="msg.fileName || 'Image attachment'" class="msg-attached-image" loading="lazy" />
           <div class="image-overlay-hint">
             <img src="/icons/search.svg" class="icon-img-sm" alt="Zoom" />
           </div>
         </div>
 
         <div *ngIf="msg.messageType === 'file' && msg.fileUrl" class="msg-file-attachment">
-          <a [href]="msg.fileUrl" target="_blank" [download]="msg.fileName || 'download'" class="file-card-link">
+          <a [href]="msg.fileUrl | mediaUrl" target="_blank" [download]="msg.fileName || 'download'" class="file-card-link">
             <div class="file-icon-wrap">
               <img src="/icons/file.svg" class="icon-img" alt="File" />
             </div>

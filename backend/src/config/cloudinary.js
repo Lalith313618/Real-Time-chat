@@ -51,7 +51,7 @@ const uploadFile = (buffer, options = {}) => {
             if (error) {
               console.warn('[Cloudinary Stream Error]:', error.message, '- falling back to local');
               // Fallback to local on Cloudinary network/auth error
-              return saveLocally(buffer, originalname, mimetype)
+              return saveLocally(buffer, originalname, mimetype, options.req)
                 .then(resolve)
                 .catch(reject);
             }
@@ -68,13 +68,13 @@ const uploadFile = (buffer, options = {}) => {
         uploadStream.end(buffer);
       } catch (err) {
         console.warn('[Cloudinary Exception]:', err.message, '- falling back to local');
-        saveLocally(buffer, originalname, mimetype)
+        saveLocally(buffer, originalname, mimetype, options.req)
           .then(resolve)
           .catch(reject);
       }
     } else {
       // Local storage fallback
-      saveLocally(buffer, originalname, mimetype)
+      saveLocally(buffer, originalname, mimetype, options.req)
         .then(resolve)
         .catch(reject);
     }
@@ -84,7 +84,7 @@ const uploadFile = (buffer, options = {}) => {
 /**
  * Save file locally in backend/uploads directory
  */
-const saveLocally = (buffer, originalname, mimetype) => {
+const saveLocally = (buffer, originalname, mimetype, req) => {
   return new Promise((resolve, reject) => {
     try {
       const uploadsDir = path.join(__dirname, '..', '..', 'uploads');
@@ -107,7 +107,12 @@ const saveLocally = (buffer, originalname, mimetype) => {
         else if (mimetype.startsWith('audio/')) resourceType = 'audio';
 
         const port = process.env.PORT || 5000;
-        const fileUrl = `http://localhost:${port}/uploads/${uniqueName}`;
+        let host = `localhost:${port}`;
+        if (req && typeof req.get === 'function') {
+          host = req.get('host') || host;
+        }
+        const protocol = req && req.protocol ? req.protocol : 'http';
+        const fileUrl = `${protocol}://${host}/uploads/${uniqueName}`;
 
         resolve({
           fileUrl,

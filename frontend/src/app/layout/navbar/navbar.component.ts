@@ -3,26 +3,24 @@ import { CommonModule } from '@angular/common';
 import { RouterLink, Router, NavigationEnd } from '@angular/router';
 import { Subscription, filter } from 'rxjs';
 import { AuthService } from '../../core/services/auth.service';
-import { SocketService } from '../../core/services/socket.service';
 import { NetworkService } from '../../core/services/network.service';
+import { MediaUrlPipe } from '../../core/pipes/media-url.pipe';
 
 @Component({
   selector: 'app-navbar',
   standalone: true,
-  imports: [CommonModule, RouterLink],
+  imports: [CommonModule, RouterLink, MediaUrlPipe],
   templateUrl: './navbar.component.html',
   styleUrl: './navbar.component.css'
 })
 export class NavbarComponent implements OnInit, OnDestroy {
   readonly authService = inject(AuthService);
-  readonly socketService = inject(SocketService);
   readonly networkService = inject(NetworkService);
   private readonly router = inject(Router);
 
   currentPath = signal<string>('/');
-  socketConnected = signal<boolean>(false);
+  navbarAvatarFailed = signal<boolean>(false);
 
-  // Show home button ONLY on login and signup pages, never on landing page
   readonly isAuthPage = computed(() => {
     const path = this.currentPath();
     return path.startsWith('/auth/login') || path.startsWith('/auth/register');
@@ -40,12 +38,6 @@ export class NavbarComponent implements OnInit, OnDestroy {
           const path = (event.urlAfterRedirects || event.url || '/').split('?')[0].split('#')[0];
           this.currentPath.set(path);
         })
-    );
-
-    this.sub.add(
-      this.socketService.isConnected$.subscribe((connected) => {
-        this.socketConnected.set(connected);
-      })
     );
   }
 

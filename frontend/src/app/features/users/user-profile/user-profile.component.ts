@@ -12,11 +12,13 @@ import { FormsModule } from '@angular/forms';
 import { AuthService } from '../../../core/services/auth.service';
 import { UserService } from '../../../core/services/user.service';
 import { User } from '../../../core/models/user.model';
+import { MediaUrlPipe } from '../../../core/pipes/media-url.pipe';
+import { resolveMediaUrl } from '../../../core/utils/media-url.util';
 
 @Component({
   selector: 'app-user-profile',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, MediaUrlPipe],
   templateUrl: './user-profile.component.html',
   styleUrl: './user-profile.component.css'
 })
@@ -29,6 +31,7 @@ export class UserProfileComponent implements OnInit {
   user = signal<User | null>(null);
   nameInput = signal<string>('');
   imageUrlInput = signal<string>('');
+  avatarLoadFailed = signal<boolean>(false);
 
   // Selected file state
   selectedFile = signal<File | null>(null);
@@ -68,7 +71,8 @@ export class UserProfileComponent implements OnInit {
     if (current) {
       this.user.set(current);
       this.nameInput.set(current.name);
-      this.imageUrlInput.set(current.profileImage || '');
+      this.imageUrlInput.set(resolveMediaUrl(current.profileImage) || '');
+      this.avatarLoadFailed.set(false);
     }
   }
 
@@ -140,7 +144,8 @@ export class UserProfileComponent implements OnInit {
 
   // Open adjustment modal
   openAdjustModal(imageSrc?: string, fileName?: string): void {
-    const src = imageSrc || this.imageUrlInput();
+    const rawSrc = imageSrc || this.imageUrlInput();
+    const src = resolveMediaUrl(rawSrc);
     if (!src) {
       this.errorMessage.set('No image selected to adjust. Please upload an image first.');
       return;
@@ -344,11 +349,16 @@ export class UserProfileComponent implements OnInit {
 
       this.userService.uploadAvatar(blob).subscribe({
         next: (res) => {
+          const resolved = resolveMediaUrl(res.fileUrl);
+          const normalizedUser = {
+            ...res.user,
+            profileImage: resolved
+          };
           this.isUploadingAdjusted.set(false);
-          this.user.set(res.user);
-          this.authService.currentUser.set(res.user);
-          localStorage.setItem('user', JSON.stringify(res.user));
-          this.imageUrlInput.set(res.fileUrl);
+          this.user.set(normalizedUser);
+          this.authService.updateCurrentUser(normalizedUser);
+          this.imageUrlInput.set(resolved);
+          this.avatarLoadFailed.set(false);
           this.selectedFile.set(null);
           this.selectedFileName.set('');
           this.selectedFileSize.set('');
@@ -402,7 +412,8 @@ export class UserProfileComponent implements OnInit {
     this.selectedFile.set(null);
     this.selectedFileName.set('');
     this.selectedFileSize.set('');
-    this.imageUrlInput.set(url);
+    this.imageUrlInput.set(resolveMediaUrl(url));
+    this.avatarLoadFailed.set(false);
   }
 
   clearAvatar(): void {
@@ -471,11 +482,20 @@ export class UserProfileComponent implements OnInit {
     }
   }
 
+  onAvatarError(): void {
+    this.avatarLoadFailed.set(true);
+  }
+
   private finalizeSave(updatedUser: User): void {
-    this.user.set(updatedUser);
-    this.authService.currentUser.set(updatedUser);
-    localStorage.setItem('user', JSON.stringify(updatedUser));
-    this.imageUrlInput.set(updatedUser.profileImage || '');
+    const resolvedUrl = resolveMediaUrl(updatedUser.profileImage);
+    const normalizedUser = {
+      ...updatedUser,
+      profileImage: resolvedUrl
+    };
+    this.user.set(normalizedUser);
+    this.authService.updateCurrentUser(normalizedUser);
+    this.imageUrlInput.set(resolvedUrl || '');
+    this.avatarLoadFailed.set(false);
     this.selectedFile.set(null);
     this.selectedFileName.set('');
     this.selectedFileSize.set('');

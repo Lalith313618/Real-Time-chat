@@ -6,11 +6,12 @@ import { User } from '../../../../core/models/user.model';
 import { AuthService } from '../../../../core/services/auth.service';
 import { ConversationService } from '../../../../core/services/conversation.service';
 import { SocketService } from '../../../../core/services/socket.service';
+import { MediaUrlPipe } from '../../../../core/pipes/media-url.pipe';
 
 @Component({
   selector: 'app-chat-header',
   standalone: true,
-  imports: [CommonModule, RouterLink],
+  imports: [CommonModule, RouterLink, MediaUrlPipe],
   templateUrl: './chat-header.component.html',
   styleUrl: './chat-header.component.css'
 })
@@ -18,6 +19,8 @@ export class ChatHeaderComponent {
   readonly authService = inject(AuthService);
   readonly conversationService = inject(ConversationService);
   readonly socketService = inject(SocketService);
+
+  recipientAvatarError = false;
 
   @Input() activeConversation: Conversation | null = null;
   @Input() typingIndicatorText = '';

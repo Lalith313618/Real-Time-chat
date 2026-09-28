@@ -100,7 +100,7 @@
                 <div *ngIf="!m.profileImage" class="member-avatar-circle">
                   {{ m.name ? m.name.charAt(0).toUpperCase() : 'U' }}
                 </div>
-                <img *ngIf="m.profileImage" [src]="m.profileImage" [alt]="m.name" class="member-avatar-img" />
+                <img *ngIf="m.profileImage" [src]="m.profileImage | mediaUrl" [alt]="m.name" class="member-avatar-img" />
                 <span class="member-status-dot" [class.online]="isParticipantOnline(m)"></span>
               </div>
               <div class="member-text-col">

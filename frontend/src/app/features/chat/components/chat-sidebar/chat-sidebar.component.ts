@@ -7,11 +7,12 @@ import { User } from '../../../../core/models/user.model';
 import { AuthService } from '../../../../core/services/auth.service';
 import { ConversationService } from '../../../../core/services/conversation.service';
 import { SocketService } from '../../../../core/services/socket.service';
+import { MediaUrlPipe } from '../../../../core/pipes/media-url.pipe';
 
 @Component({
   selector: 'app-chat-sidebar',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink],
+  imports: [CommonModule, FormsModule, RouterLink, MediaUrlPipe],
   templateUrl: './chat-sidebar.component.html',
   styleUrl: './chat-sidebar.component.css'
 })
@@ -19,6 +20,12 @@ export class ChatSidebarComponent {
   readonly authService = inject(AuthService);
   readonly conversationService = inject(ConversationService);
   readonly socketService = inject(SocketService);
+
+  avatarErrors: Record<string, boolean> = {};
+
+  handleAvatarError(id: string): void {
+    this.avatarErrors[id] = true;
+  }
 
   @Input() conversations: Conversation[] = [];
   @Input() activeConversation: Conversation | null = null;

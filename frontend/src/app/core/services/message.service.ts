@@ -3,6 +3,7 @@ import { HttpClient, HttpEvent, HttpRequest } from '@angular/common/http';
 import { Observable, tap, map } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { Message, MessageType } from '../models/message.model';
+import { resolveMediaUrl } from '../utils/media-url.util';
 
 export interface SendMessageDto {
   conversationId: string;
@@ -55,6 +56,22 @@ export class MessageService {
   readonly isSending = signal<boolean>(false);
   readonly activeReplyTo = signal<Message | null>(null);
 
+  normalizeMessage(m: Message): Message {
+    if (!m) return m;
+    let sender = m.sender;
+    if (typeof sender === 'object' && sender !== null) {
+      sender = {
+        ...sender,
+        profileImage: sender.profileImage ? resolveMediaUrl(sender.profileImage) : ''
+      };
+    }
+    return {
+      ...m,
+      fileUrl: m.fileUrl ? resolveMediaUrl(m.fileUrl) : '',
+      sender
+    };
+  }
+
   getConversationMessages(conversationId: string, page = 1, limit = 50): Observable<MessagesResponse> {
     this.isLoading.set(true);
     return this.http
@@ -62,6 +79,10 @@ export class MessageService {
         params: { page, limit }
       })
       .pipe(
+        map((res) => ({
+          ...res,
+          messages: (res.messages || []).map((m) => this.normalizeMessage(m))
+        })),
         tap((res) => {
           this.messages.set(res.messages);
           this.isLoading.set(false);
@@ -74,7 +95,7 @@ export class MessageService {
     return this.http
       .post<{ status: string; message: Message }>(this.apiUrl, dto)
       .pipe(
-        map((res) => res.message),
+        map((res) => this.normalizeMessage(res.message)),
         tap((newMsg) => {
           this.messages.update((list) => [...list, newMsg]);
           this.activeReplyTo.set(null);
@@ -87,7 +108,7 @@ export class MessageService {
     return this.http
       .put<{ status: string; message: Message }>(`${this.apiUrl}/${messageId}`, { content })
       .pipe(
-        map((res) => res.message),
+        map((res) => this.normalizeMessage(res.message)),
         tap((updatedMsg) => {
           this.messages.update((list) =>
             list.map((m) => (m._id === messageId ? updatedMsg : m))

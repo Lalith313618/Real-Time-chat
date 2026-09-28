@@ -61,9 +61,12 @@
   position: relative;
   width: 104px;
   height: 104px;
+  min-width: 104px;
+  min-height: 104px;
   margin-bottom: 0.85rem;
   cursor: pointer;
   border-radius: 50%;
+  flex-shrink: 0;
 }
 
 .preview-avatar-circle {
@@ -83,8 +86,12 @@
 .preview-avatar-img {
   width: 104px;
   height: 104px;
+  min-width: 104px;
+  min-height: 104px;
+  aspect-ratio: 1 / 1;
   border-radius: 50%;
   object-fit: cover;
+  display: block;
   border: 3px solid var(--primary);
   box-shadow: 0 8px 24px rgba(43, 35, 23, 0.15);
 }

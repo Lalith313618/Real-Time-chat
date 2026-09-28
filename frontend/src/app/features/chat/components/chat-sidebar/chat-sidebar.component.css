@@ -200,6 +200,9 @@
 .conv-avatar-circle {
   width: 44px;
   height: 44px;
+  min-width: 44px;
+  min-height: 44px;
+  aspect-ratio: 1 / 1;
   border-radius: 50%;
   background: var(--primary-gradient);
   display: flex;
@@ -208,6 +211,7 @@
   color: #2B2317;
   font-weight: 700;
   font-size: 1.1rem;
+  flex-shrink: 0;
 }
 
 .group-badge {
@@ -215,11 +219,22 @@
   color: #FFFDF8 !important;
 }
 
+.group-badge img {
+  filter: brightness(0) invert(1);
+  width: 20px;
+  height: 20px;
+}
+
 .conv-avatar-img {
   width: 44px;
   height: 44px;
+  min-width: 44px;
+  min-height: 44px;
+  aspect-ratio: 1 / 1;
   border-radius: 50%;
   object-fit: cover;
+  display: block;
+  flex-shrink: 0;
   border: 1.5px solid var(--primary-light, #FFB16E);
 }
 

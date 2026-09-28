@@ -15,10 +15,16 @@
         role="button"
         tabindex="0"
       >
-        <div *ngIf="!imageUrlInput()" class="preview-avatar-circle">
+        <div *ngIf="!imageUrlInput() || avatarLoadFailed()" class="preview-avatar-circle">
           {{ (nameInput() || u.name).charAt(0).toUpperCase() }}
         </div>
-        <img *ngIf="imageUrlInput()" [src]="imageUrlInput()" [alt]="nameInput()" class="preview-avatar-img" />
+        <img
+          *ngIf="imageUrlInput() && !avatarLoadFailed()"
+          [src]="imageUrlInput() | mediaUrl"
+          [alt]="nameInput()"
+          class="preview-avatar-img"
+          (error)="onAvatarError()"
+        />
         <span class="status-indicator-badge" [class.online]="u.isOnline"></span>
 
         <!-- Hover Camera Overlay -->

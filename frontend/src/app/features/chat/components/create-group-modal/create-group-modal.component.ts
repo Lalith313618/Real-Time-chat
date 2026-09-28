@@ -2,11 +2,12 @@ import { Component, Input, Output, EventEmitter, computed } from '@angular/core'
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { User } from '../../../../core/models/user.model';
+import { MediaUrlPipe } from '../../../../core/pipes/media-url.pipe';
 
 @Component({
   selector: 'app-create-group-modal',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, MediaUrlPipe],
   templateUrl: './create-group-modal.component.html',
   styleUrl: './create-group-modal.component.css'
 })

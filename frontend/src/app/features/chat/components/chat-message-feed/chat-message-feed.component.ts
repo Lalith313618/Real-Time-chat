@@ -11,11 +11,13 @@ import { CommonModule } from '@angular/common';
 import { Message } from '../../../../core/models/message.model';
 import { Conversation } from '../../../../core/models/conversation.model';
 import { AuthService } from '../../../../core/services/auth.service';
+import { MediaUrlPipe } from '../../../../core/pipes/media-url.pipe';
+import { resolveMediaUrl } from '../../../../core/utils/media-url.util';
 
 @Component({
   selector: 'app-chat-message-feed',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, MediaUrlPipe],
   templateUrl: './chat-message-feed.component.html',
   styleUrl: './chat-message-feed.component.css'
 })
@@ -64,7 +66,7 @@ export class ChatMessageFeedComponent {
 
   getSenderAvatar(message: Message): string {
     if (!message.sender || typeof message.sender === 'string') return '';
-    return message.sender.profileImage || '';
+    return resolveMediaUrl(message.sender.profileImage || '');
   }
 
   getReplyPreview(replyTo: string | Message | undefined): string {

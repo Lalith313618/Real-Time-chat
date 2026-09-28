@@ -60,7 +60,7 @@
                 <div *ngIf="!u.profileImage" class="avatar-circle-sm">
                   {{ u.name.charAt(0).toUpperCase() }}
                 </div>
-                <img *ngIf="u.profileImage" [src]="u.profileImage" [alt]="u.name" class="avatar-img-sm" />
+                <img *ngIf="u.profileImage" [src]="u.profileImage | mediaUrl" [alt]="u.name" class="avatar-img-sm" />
               </div>
               <div class="user-meta-col">
                 <span class="user-select-name">{{ u.name }}</span>

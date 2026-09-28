@@ -4,7 +4,7 @@
       <div *ngIf="!user.profileImage" class="user-avatar-large">
         {{ user.name.charAt(0).toUpperCase() }}
       </div>
-      <img *ngIf="user.profileImage" [src]="user.profileImage" [alt]="user.name" class="user-avatar-large img" />
+      <img *ngIf="user.profileImage" [src]="user.profileImage | mediaUrl" [alt]="user.name" class="user-avatar-large img" />
       <div class="user-hero-details">
         <div class="user-hero-tag">
           <span class="badge badge-success">

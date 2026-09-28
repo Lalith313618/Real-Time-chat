@@ -5,6 +5,7 @@ import { Router } from '@angular/router';
 import { environment } from '../../../environments/environment';
 import { User } from '../models/user.model';
 import { SocketService } from './socket.service';
+import { resolveMediaUrl } from '../utils/media-url.util';
 
 export interface AuthResponse {
   status: string;
@@ -44,8 +45,11 @@ export class AuthService {
     if (this.token()) {
       this.getMe().subscribe({
         next: (res) => {
-          this.currentUser.set(res.user);
-          localStorage.setItem('user', JSON.stringify(res.user));
+          const normalized = this.normalizeUser(res.user);
+          this.currentUser.set(normalized);
+          if (normalized) {
+            localStorage.setItem('user', JSON.stringify(normalized));
+          }
         },
         error: () => {
           this.logout();
@@ -93,12 +97,31 @@ export class AuthService {
     this.router.navigate(['/auth/login']);
   }
 
+  updateCurrentUser(user: User): void {
+    const normalized = this.normalizeUser(user);
+    this.currentUser.set(normalized);
+    if (normalized) {
+      localStorage.setItem('user', JSON.stringify(normalized));
+    }
+  }
+
   private setSession(token: string, user: User): void {
+    const normalized = this.normalizeUser(user);
     localStorage.setItem('token', token);
-    localStorage.setItem('user', JSON.stringify(user));
+    if (normalized) {
+      localStorage.setItem('user', JSON.stringify(normalized));
+    }
     this.token.set(token);
-    this.currentUser.set(user);
+    this.currentUser.set(normalized);
     this.socketService.connect(token);
+  }
+
+  private normalizeUser(user: User | null): User | null {
+    if (!user) return null;
+    return {
+      ...user,
+      profileImage: user.profileImage ? resolveMediaUrl(user.profileImage) : ''
+    };
   }
 
   private getStoredToken(): string | null {
@@ -112,7 +135,8 @@ export class AuthService {
   private getStoredUser(): User | null {
     try {
       const userJson = localStorage.getItem('user');
-      return userJson ? JSON.parse(userJson) : null;
+      const parsed = userJson ? JSON.parse(userJson) : null;
+      return this.normalizeUser(parsed);
     } catch {
       return null;
     }

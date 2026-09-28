@@ -235,6 +235,7 @@ const uploadAvatar = async (req, res) => {
       folder: 'chat_app/avatars',
       originalname: req.file.originalname,
       mimetype: req.file.mimetype,
+      req,
     });
 
     const user = await User.findById(req.user._id);
