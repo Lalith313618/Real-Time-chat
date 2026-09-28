@@ -1,0 +1,107 @@
+<div *ngIf="isOpen && user" class="drawer-backdrop" (click)="onClose()">
+  <div class="user-info-drawer glass-card" (click)="$event.stopPropagation()">
+    <div class="drawer-header">
+      <h3 class="drawer-title">Contact Information</h3>
+      <button (click)="onClose()" class="drawer-close-btn" aria-label="Close" title="Close">
+        &times;
+      </button>
+    </div>
+
+    <div class="drawer-body">
+      <!-- Contact Hero Card -->
+      <div class="user-hero-card">
+        <div class="user-hero-avatar-wrapper">
+          <div *ngIf="!user.profileImage || avatarError" class="user-hero-avatar-circle">
+            {{ user.name ? user.name.charAt(0).toUpperCase() : 'U' }}
+          </div>
+          <img
+            *ngIf="user.profileImage && !avatarError"
+            [src]="user.profileImage | mediaUrl"
+            [alt]="user.name"
+            class="user-hero-avatar-img"
+            (error)="handleAvatarError()"
+          />
+          <span class="user-hero-status-dot" [class.online]="isOnline"></span>
+        </div>
+
+        <h4 class="user-hero-name">{{ user.name }}</h4>
+
+        <div class="user-status-pill" [class.online]="isOnline">
+          <span class="dot" [class.online]="isOnline"></span>
+          <span>{{ isOnline ? 'Online now' : 'Last seen ' + formatLastSeen(lastSeen || user.lastSeen) }}</span>
+        </div>
+
+        <span class="user-id-meta">User ID: {{ user._id | slice:0:8 }}...</span>
+      </div>
+
+      <!-- Account Details Section -->
+      <div class="drawer-section">
+        <span class="section-label">Account Details</span>
+        <div class="info-card">
+          <div class="info-row">
+            <div class="info-icon-wrap">
+              <img src="/icons/chat.svg" class="icon-img-sm" alt="Email" />
+            </div>
+            <div class="info-content">
+              <span class="info-label">Email Address</span>
+              <span class="info-value email-value">{{ user.email }}</span>
+            </div>
+          </div>
+
+          <div class="info-row">
+            <div class="info-icon-wrap">
+              <img src="/icons/check.svg" class="icon-img-sm" alt="Status" />
+            </div>
+            <div class="info-content">
+              <span class="info-label">Account Status</span>
+              <span class="badge badge-success status-chip">Active Member</span>
+            </div>
+          </div>
+
+          <div class="info-row" *ngIf="user.createdAt">
+            <div class="info-icon-wrap">
+              <img src="/icons/home.svg" class="icon-img-sm" alt="Joined" />
+            </div>
+            <div class="info-content">
+              <span class="info-label">Member Since</span>
+              <span class="info-value">{{ user.createdAt | date:'mediumDate' }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Chat Actions Section -->
+      <div class="drawer-section">
+        <span class="section-label">Conversation Actions</span>
+        <div class="action-card">
+          <button type="button" (click)="onStartSearch()" class="action-card-btn">
+            <div class="action-icon-wrap">
+              <img src="/icons/search.svg" class="icon-img-sm" alt="Search" />
+            </div>
+            <div class="action-text-col">
+              <span class="action-btn-title">Search in Chat</span>
+              <span class="action-btn-subtitle">Find messages, links, and documents</span>
+            </div>
+          </button>
+
+          <button type="button" (click)="onClearChat()" class="action-card-btn danger">
+            <div class="action-icon-wrap danger">
+              <img src="/icons/trash.svg" class="icon-img-sm" alt="Clear Chat" />
+            </div>
+            <div class="action-text-col">
+              <span class="action-btn-title">Clear Chat History</span>
+              <span class="action-btn-subtitle">Delete all messages in this conversation</span>
+            </div>
+          </button>
+        </div>
+      </div>
+
+      <!-- Footer Button -->
+      <div class="drawer-footer-action">
+        <button type="button" (click)="onClose()" class="btn btn-secondary btn-block">
+          <span>Close Information</span>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

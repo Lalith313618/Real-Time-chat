@@ -3,8 +3,6 @@
   flex-direction: column;
   gap: 2rem;
 }
-
-/* User Hero Card */
 .user-hero-card {
   padding: 2rem 2.25rem;
   background: var(--bg-card);
@@ -69,8 +67,6 @@
   gap: 0.85rem;
   flex-wrap: wrap;
 }
-
-/* Guest Hero Banner */
 .hero-banner {
   text-align: center;
   padding: 3.5rem 2rem;
@@ -122,7 +118,6 @@
   flex-wrap: wrap;
 }
 
-/* Features Showcase Grid */
 .features-showcase-section {
   display: flex;
   flex-direction: column;

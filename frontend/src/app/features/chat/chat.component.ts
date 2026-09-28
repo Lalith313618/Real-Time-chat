@@ -27,6 +27,7 @@ import { ImageLightboxComponent } from './components/image-lightbox/image-lightb
 import { SearchDrawerComponent } from './components/search-drawer/search-drawer.component';
 import { CreateGroupModalComponent } from './components/create-group-modal/create-group-modal.component';
 import { GroupInfoDrawerComponent } from './components/group-info-drawer/group-info-drawer.component';
+import { UserInfoDrawerComponent } from './components/user-info-drawer/user-info-drawer.component';
 import { ChatSidebarComponent } from './components/chat-sidebar/chat-sidebar.component';
 import { ChatHeaderComponent } from './components/chat-header/chat-header.component';
 import { ChatInputBarComponent } from './components/chat-input-bar/chat-input-bar.component';
@@ -43,6 +44,7 @@ import { ChatMessageFeedComponent } from './components/chat-message-feed/chat-me
     SearchDrawerComponent,
     CreateGroupModalComponent,
     GroupInfoDrawerComponent,
+    UserInfoDrawerComponent,
     ChatSidebarComponent,
     ChatHeaderComponent,
     ChatInputBarComponent,
@@ -113,6 +115,9 @@ export class ChatComponent implements OnInit, OnDestroy, AfterViewChecked {
   memberToAddSearch = signal<string>('');
   groupActionLoading = signal<boolean>(false);
   groupActionMessage = signal<string>('');
+
+  // User Profile Drawer State (Direct Chat)
+  isUserProfileOpen = signal<boolean>(false);
 
   // Message Search State
   isSearchOpen = signal<boolean>(false);
@@ -539,6 +544,7 @@ export class ChatComponent implements OnInit, OnDestroy, AfterViewChecked {
     this.editingMessage.set(null);
     this.replyingTo.set(null);
     this.typingUsers.set(new Map());
+    this.isUserProfileOpen.set(false);
 
     // Join real-time room for this conversation
     this.socketService.joinConversation(conv._id);
@@ -563,6 +569,7 @@ export class ChatComponent implements OnInit, OnDestroy, AfterViewChecked {
     this.isSearchOpen.set(false);
     this.clearSearch();
     this.closeGroupInfo();
+    this.closeUserProfile();
     this.router.navigate(['/chat'], { replaceUrl: true });
   }
 
@@ -1217,6 +1224,7 @@ export class ChatComponent implements OnInit, OnDestroy, AfterViewChecked {
   openGroupInfo(): void {
     const conv = this.activeConversation();
     if (!conv || !conv.isGroup) return;
+    this.closeUserProfile();
     this.editGroupNameInput.set(conv.groupName || '');
     this.isEditingGroupName.set(false);
     this.isAddingMemberOpen.set(false);
@@ -1235,6 +1243,24 @@ export class ChatComponent implements OnInit, OnDestroy, AfterViewChecked {
     this.isGroupInfoOpen.set(false);
     this.isEditingGroupName.set(false);
     this.isAddingMemberOpen.set(false);
+  }
+
+  // --- Contact / Direct User Profile Drawer Methods ---
+  openUserProfile(): void {
+    const conv = this.activeConversation();
+    if (!conv || conv.isGroup) return;
+    this.closeGroupInfo();
+    this.isUserProfileOpen.set(true);
+  }
+
+  closeUserProfile(): void {
+    this.isUserProfileOpen.set(false);
+  }
+
+  getDirectRecipient(): User | null {
+    const conv = this.activeConversation();
+    if (!conv || conv.isGroup) return null;
+    return this.getOtherParticipant(conv);
   }
 
   isCurrentUserAdmin(conv?: Conversation | null): boolean {
