@@ -12,22 +12,30 @@
       </a>
     </div>
 
-    <nav *ngIf="authService.isLoggedIn()" class="main-nav" aria-label="Desktop Navigation">
-      <a routerLink="/" class="nav-item" [class.active]="currentPath() === '/'">
-        <img src="/icons/home.svg" class="icon-img-sm" alt="Dashboard" />
-        <span>Dashboard</span>
-      </a>
+    <nav *ngIf="authService.isLoggedIn()" class="main-nav" aria-label="Main Navigation">
       <a routerLink="/chat" class="nav-item" [class.active]="currentPath().startsWith('/chat')">
-        <img src="/icons/chat.svg" class="icon-img-sm" alt="Chat" />
-        <span>Chat</span>
+        <div class="nav-icon-wrap">
+          <img src="/icons/chat.svg" class="icon-img-sm" alt="Chat" />
+        </div>
+        <span class="nav-label">Chat</span>
       </a>
       <a routerLink="/users/search" class="nav-item" [class.active]="currentPath().startsWith('/users/search')">
-        <img src="/icons/search.svg" class="icon-img-sm" alt="Find Users" />
-        <span>Find Users</span>
+        <div class="nav-icon-wrap">
+          <img src="/icons/search.svg" class="icon-img-sm" alt="Find Users" />
+        </div>
+        <span class="nav-label">Search</span>
+      </a>
+      <a routerLink="/" class="nav-item" [class.active]="currentPath() === '/'">
+        <div class="nav-icon-wrap">
+          <img src="/icons/home.svg" class="icon-img-sm" alt="Dashboard" />
+        </div>
+        <span class="nav-label">Dashboard</span>
       </a>
       <a routerLink="/users/profile" class="nav-item" [class.active]="currentPath().startsWith('/users/profile')">
-        <img src="/icons/user.svg" class="icon-img-sm" alt="Profile" />
-        <span>Profile</span>
+        <div class="nav-icon-wrap">
+          <img src="/icons/user.svg" class="icon-img-sm" alt="Profile" />
+        </div>
+        <span class="nav-label">Profile</span>
       </a>
     </nav>
   </div>
