@@ -1,145 +1,336 @@
-<div class="user-search-container">
-  <div class="page-header">
+<div class="directory-container">
+  <!-- Page Header -->
+  <header class="directory-header">
     <div>
-      <h2 class="page-title">Find Users</h2>
-      <p class="page-subtitle">Search for registered users by name or email to start real-time conversations</p>
+      <div class="header-pretitle" *ngIf="orgService.currentOrganization() as org">
+        🏢 {{ org.name }} &bull; Workplace Directory
+      </div>
+      <h1 class="header-title">User Directory</h1>
+      <p class="header-subtitle">
+        Discover teammates, browse departments, view profiles, and connect across your workplace in real-time.
+      </p>
     </div>
-  </div>
 
-  <div *ngIf="conversationSuccess() as cs" class="alert-box alert-success">
-    <img src="/icons/check.svg" class="icon-img-sm" alt="Success" />
-    <div class="alert-content">
-      <strong>{{ cs.message }}</strong>
-      <span class="alert-sub">Conversation ID: <code>{{ cs.conversation._id }}</code> &bull; Ready for messaging</span>
-    </div>
-  </div>
-
-  <div class="glass-card search-card">
-    <div class="search-input-wrapper">
-      <img src="/icons/search.svg" class="search-icon icon-img-sm" alt="Search" />
-      <input
-        type="text"
-        [ngModel]="searchQuery()"
-        (ngModelChange)="onSearchChange($event)"
-        placeholder="Type a name or email address"
-        class="search-input"
-        autocomplete="off"
-      />
-      <button *ngIf="searchQuery()" (click)="clearSearch()" class="clear-btn" title="Clear search">
-        <img src="/icons/close.svg" class="icon-img-sm" alt="Clear" />
+    <!-- View Mode Switcher -->
+    <div class="view-switcher">
+      <button
+        class="switcher-btn"
+        [class.active]="viewMode() === 'grid'"
+        (click)="viewMode.set('grid')"
+        title="Grid View"
+      >
+        <span>⊞ Cards</span>
       </button>
-      <div *ngIf="isLoading()" class="search-spinner">
-        <span class="loader-spinner"></span>
+      <button
+        class="switcher-btn"
+        [class.active]="viewMode() === 'table'"
+        (click)="viewMode.set('table')"
+        title="Table View"
+      >
+        <span>☰ Table</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- Filter & Search Toolbar -->
+  <section class="toolbar-card glass-card">
+    <div class="toolbar-top">
+      <div class="search-input-wrap">
+        <span class="search-icon">🔍</span>
+        <input
+          type="text"
+          [ngModel]="searchQuery()"
+          (ngModelChange)="onSearchChange($event)"
+          placeholder="Search by name, email, job title, or department..."
+          class="directory-search-input"
+          autocomplete="off"
+        />
+        <button *ngIf="searchQuery()" (click)="clearSearch()" class="clear-btn" title="Clear search">
+          ✕
+        </button>
+        <div *ngIf="isLoading()" class="search-spinner">
+          <span class="loader-spinner"></span>
+        </div>
+      </div>
+      <div class="presence-filter-wrap">
+        <label class="filter-label">Status:</label>
+        <select
+          class="filter-select"
+          [ngModel]="selectedPresence()"
+          (ngModelChange)="setPresence($event)"
+        >
+          <option value="ALL">All Statuses</option>
+          <option value="online">🟢 Online Now</option>
+          <option value="available">🟢 Available</option>
+          <option value="busy">🔴 Busy</option>
+          <option value="away">🟡 Away</option>
+          <option value="offline">⚪ Offline</option>
+        </select>
       </div>
     </div>
-  </div>
-
-  <div class="section-meta-row">
-    <h3>
-      {{ searchQuery() ? 'Search Results (' + searchResults().length + ')' : 'Community Directory (' + allUsers().length + ')' }}
-    </h3>
-    <span *ngIf="searchQuery()" class="search-indicator">
-      Filtering by: "<strong>{{ searchQuery() }}</strong>"
+    <div class="departments-row" *ngIf="departments().length > 0">
+      <span class="dept-label">Department:</span>
+      <button
+        class="dept-pill"
+        [class.active]="selectedDepartment() === 'ALL'"
+        (click)="setDepartment('ALL')"
+      >
+        All Departments
+      </button>
+      <button
+        *ngFor="let dept of departments()"
+        class="dept-pill"
+        [class.active]="selectedDepartment().toLowerCase() === dept.toLowerCase()"
+        (click)="setDepartment(dept)"
+      >
+        {{ dept }}
+      </button>
+    </div>
+  </section>
+  <div class="results-meta-bar">
+    <span class="results-count">
+      Showing <strong>{{ directoryUsers().length }}</strong> colleagues
+      <span *ngIf="selectedDepartment() !== 'ALL'"> in <em>{{ selectedDepartment() }}</em></span>
+      <span *ngIf="searchQuery()"> matching "<em>{{ searchQuery() }}</em>"</span>
     </span>
   </div>
-
-  <div class="users-grid" *ngIf="(searchQuery() ? searchResults() : allUsers()) as displayUsers">
-    <div *ngFor="let user of displayUsers" class="glass-card user-card">
-      <div class="user-card-header">
+  <main *ngIf="viewMode() === 'grid'" class="users-grid">
+    <div *ngFor="let user of directoryUsers()" class="user-card glass-card">
+      <div class="card-top">
         <div class="avatar-container">
-          <div *ngIf="!user.profileImage" class="avatar-circle">
+          <img
+            *ngIf="user.profileImage"
+            [src]="user.profileImage | mediaUrl"
+            [alt]="user.name"
+            class="user-avatar"
+          />
+          <div *ngIf="!user.profileImage" class="avatar-fallback">
             {{ user.name.charAt(0).toUpperCase() }}
           </div>
-          <img *ngIf="user.profileImage" [src]="user.profileImage | mediaUrl" [alt]="user.name" class="avatar-img" />
-          <span class="status-indicator-badge" [class.online]="user.isOnline" [title]="user.isOnline ? 'Online' : 'Offline'"></span>
+          <span
+            class="presence-badge"
+            [class.online]="user.isOnline"
+            [class.busy]="user.presenceStatus === 'busy'"
+            [class.away]="user.presenceStatus === 'away'"
+            [title]="user.isOnline ? 'Online' : 'Offline'"
+          ></span>
         </div>
-        <div class="user-main-info">
-          <h4 class="card-user-name">{{ user.name }}</h4>
-          <p class="card-user-email">{{ user.email }}</p>
+
+        <div class="card-identity">
+          <div class="name-row">
+            <h3 class="user-name">{{ user.name }}</h3>
+            <span *ngIf="authService.currentUser()?._id === user._id" class="self-tag">You</span>
+          </div>
+
+          <p class="user-title" *ngIf="user.jobTitle">{{ user.jobTitle }}</p>
+          <p class="user-title muted" *ngIf="!user.jobTitle">Teammate</p>
+
+          <div class="tags-row">
+            <span class="dept-badge" *ngIf="user.department">{{ user.department }}</span>
+            <span class="role-badge" [attr.data-role]="user.orgRole || 'MEMBER'">
+              {{ user.orgRole || 'MEMBER' }}
+            </span>
+          </div>
         </div>
       </div>
 
-      <div class="user-card-meta">
-        <div class="meta-item">
-          <span class="meta-label">Status</span>
-          <span class="badge" [ngClass]="user.isOnline ? 'badge-success' : 'badge-offline'">
-            {{ user.isOnline ? 'Online' : 'Offline' }}
-          </span>
+      <div class="status-banner" *ngIf="user.statusMessage">
+        <span class="status-emoji">{{ user.statusEmoji || '💬' }}</span>
+        <span class="status-text">{{ user.statusMessage }}</span>
+      </div>
+
+      <div class="card-meta">
+        <div class="meta-line">
+          <span class="meta-icon">✉️</span>
+          <span class="meta-val">{{ user.email }}</span>
         </div>
-        <div class="meta-item">
-          <span class="meta-label">Last Seen</span>
-          <span class="meta-value">
-            {{ user.lastSeen ? (user.lastSeen | date:'shortTime') : 'Recent' }}
-          </span>
+        <div class="meta-line" *ngIf="user.phone">
+          <span class="meta-icon">📞</span>
+          <span class="meta-val">{{ user.phone }}</span>
         </div>
       </div>
 
-      <div class="user-card-actions">
-        <button class="btn btn-secondary btn-sm card-action-btn" (click)="viewProfile(user)">
-          <img src="/icons/user.svg" class="icon-img-sm" alt="Profile" />
-          View Profile
+      <div class="card-actions">
+        <button (click)="viewProfile(user)" class="btn btn-secondary btn-sm flex-1">
+          Profile
         </button>
-        <button class="btn btn-primary btn-sm card-action-btn" (click)="startConversation(user)" [disabled]="isCreatingChat()">
-          <img src="/icons/chat.svg" class="icon-img-sm" alt="Message" />
-          Message
+        <button
+          (click)="startConversation(user)"
+          class="btn btn-primary btn-sm flex-1"
+          [disabled]="isCreatingChat() || authService.currentUser()?._id === user._id"
+        >
+          <span>Chat</span>
         </button>
       </div>
     </div>
+  </main>
 
-    <div *ngIf="displayUsers.length === 0 && !isLoading()" class="glass-card empty-card">
-      <div class="empty-icon">
-        <img src="/icons/search.svg" class="icon-img-lg" alt="Search" />
-      </div>
-      <h4>No Users Found</h4>
-      <p>No registered users match your search criteria. Try a different name or email.</p>
-      <button *ngIf="searchQuery()" (click)="clearSearch()" class="btn btn-secondary btn-sm">
-        Reset Search
-      </button>
-    </div>
+  <main *ngIf="viewMode() === 'table'" class="table-card glass-card">
+    <table class="directory-table">
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Job Title</th>
+          <th>Department</th>
+          <th>Email</th>
+          <th>Status</th>
+          <th>Role</th>
+          <th class="text-right">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let user of directoryUsers()" class="table-row">
+          <td>
+            <div class="table-user-cell">
+              <div class="mini-avatar-wrap">
+                <img
+                  *ngIf="user.profileImage"
+                  [src]="user.profileImage | mediaUrl"
+                  alt="Avatar"
+                  class="mini-avatar"
+                />
+                <span *ngIf="!user.profileImage" class="mini-avatar-fallback">
+                  {{ user.name.charAt(0).toUpperCase() }}
+                </span>
+                <span class="mini-presence-dot" [class.online]="user.isOnline"></span>
+              </div>
+              <div>
+                <span class="table-name">{{ user.name }}</span>
+                <span *ngIf="authService.currentUser()?._id === user._id" class="self-tag">(You)</span>
+              </div>
+            </div>
+          </td>
+
+          <td>{{ user.jobTitle || '—' }}</td>
+          <td>
+            <span class="dept-badge" *ngIf="user.department">{{ user.department }}</span>
+            <span *ngIf="!user.department">—</span>
+          </td>
+          <td class="text-muted">{{ user.email }}</td>
+          <td>
+            <span class="presence-tag" [class.online]="user.isOnline">
+              <span class="dot"></span>
+              {{ user.isOnline ? 'Online' : 'Offline' }}
+            </span>
+          </td>
+          <td>
+            <span class="role-badge" [attr.data-role]="user.orgRole || 'MEMBER'">
+              {{ user.orgRole || 'MEMBER' }}
+            </span>
+          </td>
+          <td class="text-right">
+            <div class="table-actions">
+              <button (click)="viewProfile(user)" class="btn btn-secondary btn-xs">
+                Profile
+              </button>
+              <button
+                (click)="startConversation(user)"
+                class="btn btn-primary btn-xs"
+                [disabled]="isCreatingChat() || authService.currentUser()?._id === user._id"
+              >
+                Chat
+              </button>
+            </div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </main>
+
+  <!-- Empty Results Fallback -->
+  <div *ngIf="directoryUsers().length === 0 && !isLoading()" class="empty-directory glass-card">
+    <span class="empty-icon">👥</span>
+    <h3>No Teammates Found</h3>
+    <p>No colleagues match your current search and filter settings.</p>
+    <button (click)="clearSearch()" class="btn btn-secondary btn-sm">
+      Reset Filters
+    </button>
   </div>
+</div>
 
-  <div *ngIf="showProfileModal() && selectedUser() as user" class="modal-backdrop" (click)="closeProfileModal()">
-    <div class="modal-card glass-card" (click)="$event.stopPropagation()">
-      <button class="modal-close-btn" (click)="closeProfileModal()" aria-label="Close modal">
-        &times;
-      </button>
+<!-- RICH USER PROFILE MODAL -->
+<div *ngIf="showProfileModal() && selectedUser() as profile" class="modal-backdrop" (click)="closeProfileModal()">
+  <div class="modal-card profile-detail-modal" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h3 class="modal-title">Member Profile</h3>
+      <button class="modal-close-btn" (click)="closeProfileModal()">✕</button>
+    </div>
 
-      <div class="modal-header">
-        <div class="modal-avatar">
-          <div *ngIf="!user.profileImage" class="modal-avatar-circle">
-            {{ user.name.charAt(0).toUpperCase() }}
+    <div class="modal-body">
+      <!-- Profile Header Banner -->
+      <div class="profile-hero">
+        <div class="hero-avatar-wrap">
+          <img
+            *ngIf="profile.profileImage"
+            [src]="profile.profileImage | mediaUrl"
+            [alt]="profile.name"
+            class="hero-avatar"
+          />
+          <div *ngIf="!profile.profileImage" class="hero-avatar-fallback">
+            {{ profile.name.charAt(0).toUpperCase() }}
           </div>
-          <img *ngIf="user.profileImage" [src]="user.profileImage | mediaUrl" [alt]="user.name" class="modal-avatar-img" />
-          <span class="status-indicator-badge large" [class.online]="user.isOnline"></span>
+          <span class="hero-presence" [class.online]="profile.isOnline"></span>
         </div>
-        <h3 class="modal-name">{{ user.name }}</h3>
-        <p class="modal-email">{{ user.email }}</p>
-      </div>
 
-      <div class="modal-details-list">
-        <div class="detail-row">
-          <span class="detail-label">Online Status</span>
-          <span class="badge" [ngClass]="user.isOnline ? 'badge-success' : 'badge-offline'">
-            {{ user.isOnline ? 'Active Now' : 'Offline' }}
-          </span>
-        </div>
-        <div class="detail-row">
-          <span class="detail-label">Last Seen</span>
-          <span class="detail-val">{{ user.lastSeen ? (user.lastSeen | date:'medium') : 'Recently active' }}</span>
-        </div>
-        <div class="detail-row">
-          <span class="detail-label">Joined Platform</span>
-          <span class="detail-val">{{ user.createdAt ? (user.createdAt | date:'mediumDate') : 'Verified User' }}</span>
-        </div>
-        <div class="detail-row">
-          <span class="detail-label">User ID</span>
-          <span class="detail-val mono">{{ user._id }}</span>
+        <div class="hero-info">
+          <h2 class="hero-name">{{ profile.name }}</h2>
+          <p class="hero-title" *ngIf="profile.jobTitle">{{ profile.jobTitle }}</p>
+          <div class="hero-badges">
+            <span class="dept-badge" *ngIf="profile.department">{{ profile.department }}</span>
+            <span class="role-badge" [attr.data-role]="profile.orgRole || 'MEMBER'">
+              {{ profile.orgRole || 'MEMBER' }}
+            </span>
+          </div>
         </div>
       </div>
 
-      <div class="modal-footer">
-        <button class="btn btn-secondary" (click)="closeProfileModal()">Close</button>
+      <!-- Workplace Status Message -->
+      <div class="profile-status-callout" *ngIf="profile.statusMessage">
+        <span class="callout-emoji">{{ profile.statusEmoji || '💬' }}</span>
+        <span class="callout-text">{{ profile.statusMessage }}</span>
       </div>
+
+      <!-- Bio / About -->
+      <div class="profile-section" *ngIf="profile.bio">
+        <h4 class="section-heading">About</h4>
+        <p class="bio-text">{{ profile.bio }}</p>
+      </div>
+
+      <!-- Contact Details -->
+      <div class="profile-section">
+        <h4 class="section-heading">Contact Information</h4>
+        <div class="info-grid">
+          <div class="info-item">
+            <span class="info-label">Email Address</span>
+            <span class="info-value">{{ profile.email }}</span>
+          </div>
+          <div class="info-item" *ngIf="profile.phone">
+            <span class="info-label">Phone</span>
+            <span class="info-value">{{ profile.phone }}</span>
+          </div>
+          <div class="info-item">
+            <span class="info-label">Availability</span>
+            <span class="info-value capitalize">{{ profile.presenceStatus || (profile.isOnline ? 'Online' : 'Offline') }}</span>
+          </div>
+          <div class="info-item">
+            <span class="info-label">Member Since</span>
+            <span class="info-value">{{ profile.createdAt | date: 'mediumDate' }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-footer">
+      <button (click)="closeProfileModal()" class="btn btn-secondary">
+        Close
+      </button>
+      <button
+        (click)="startConversation(profile)"
+        class="btn btn-primary"
+        [disabled]="isCreatingChat() || authService.currentUser()?._id === profile._id"
+      >
+        <span>💬 Start Direct Message</span>
+      </button>
     </div>
   </div>
 </div>

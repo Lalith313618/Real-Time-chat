@@ -1,6 +1,8 @@
 const express = require('express');
 const router = express.Router();
 const {
+  getUserDirectory,
+  getDepartments,
   searchUsers,
   getUserProfile,
   updateProfile,
@@ -16,6 +18,8 @@ const { uploadSingle } = require('../middleware/upload.middleware');
 // All user routes require authentication
 router.use(protect);
 
+router.get('/directory', getUserDirectory);
+router.get('/departments', getDepartments);
 router.post('/avatar', uploadSingle('avatar'), uploadAvatar);
 router.delete('/avatar', removeAvatar);
 router.get('/notifications', getNotificationSettings);

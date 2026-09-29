@@ -2,11 +2,12 @@ import { Component, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
-import { Subject, debounceTime, distinctUntilChanged, switchMap, of } from 'rxjs';
+import { Subject, debounceTime, distinctUntilChanged } from 'rxjs';
 import { UserService } from '../../../core/services/user.service';
 import { ConversationService } from '../../../core/services/conversation.service';
+import { OrganizationService } from '../../../core/services/organization.service';
+import { AuthService } from '../../../core/services/auth.service';
 import { User } from '../../../core/models/user.model';
-import { Conversation } from '../../../core/models/conversation.model';
 import { MediaUrlPipe } from '../../../core/pipes/media-url.pipe';
 
 @Component({
@@ -14,68 +15,74 @@ import { MediaUrlPipe } from '../../../core/pipes/media-url.pipe';
   standalone: true,
   imports: [CommonModule, FormsModule, MediaUrlPipe],
   templateUrl: './user-search.component.html',
-  styleUrl: './user-search.component.css'
+  styleUrl: './user-search.component.css',
 })
 export class UserSearchComponent implements OnInit {
   private readonly userService = inject(UserService);
   private readonly router = inject(Router);
   readonly conversationService = inject(ConversationService);
+  readonly orgService = inject(OrganizationService);
+  readonly authService = inject(AuthService);
 
+  // Search & Filter state
   searchQuery = signal<string>('');
+  selectedDepartment = signal<string>('ALL');
+  selectedPresence = signal<string>('ALL');
+  viewMode = signal<'grid' | 'table'>('grid');
+
+  // Data state
+  departments = signal<string[]>([]);
+  directoryUsers = signal<User[]>([]);
   isLoading = signal<boolean>(false);
-  searchResults = signal<User[]>([]);
-  allUsers = signal<User[]>([]);
+
+  // Profile Drawer / Modal state
   selectedUser = signal<User | null>(null);
   showProfileModal = signal<boolean>(false);
-
-  // Conversation creation notification
-  conversationSuccess = signal<{ message: string; conversation: Conversation } | null>(null);
   isCreatingChat = signal<boolean>(false);
 
   private searchSubject = new Subject<string>();
 
   ngOnInit(): void {
-    // Load initial user directory
-    this.loadAllUsers();
+    this.loadDepartments();
+    this.loadDirectory();
 
-    // Debounced search stream
+    // Debounced live search
     this.searchSubject
-      .pipe(
-        debounceTime(300),
-        distinctUntilChanged(),
-        switchMap((query) => {
-          if (!query.trim()) {
-            this.isLoading.set(false);
-            return of([]);
-          }
-          this.isLoading.set(true);
-          return this.userService.searchUsers(query);
-        })
-      )
-      .subscribe({
-        next: (users) => {
-          this.searchResults.set(users);
-          this.isLoading.set(false);
-        },
-        error: (err) => {
-          console.error('Search error:', err);
-          this.isLoading.set(false);
-        }
+      .pipe(debounceTime(250), distinctUntilChanged())
+      .subscribe(() => {
+        this.loadDirectory();
       });
   }
 
-  loadAllUsers(): void {
-    this.isLoading.set(true);
-    this.userService.getAllUsers().subscribe({
-      next: (users) => {
-        this.allUsers.set(users);
-        this.isLoading.set(false);
+  loadDepartments(): void {
+    this.userService.getDepartments().subscribe({
+      next: (depts) => {
+        this.departments.set(depts);
       },
-      error: (err) => {
-        console.error('Failed to load users:', err);
-        this.isLoading.set(false);
-      }
     });
+  }
+
+  loadDirectory(): void {
+    this.isLoading.set(true);
+    const orgId = this.orgService.currentOrganization()?._id;
+
+    this.userService
+      .getUserDirectory({
+        q: this.searchQuery().trim(),
+        department: this.selectedDepartment(),
+        presence: this.selectedPresence(),
+        orgId,
+      })
+      .subscribe({
+        next: (users) => {
+          this.directoryUsers.set(users);
+          this.isLoading.set(false);
+        },
+        error: (err) => {
+          console.error('[User Directory Load Error]:', err);
+          this.isLoading.set(false);
+        },
+      });
   }
 
   onSearchChange(term: string): void {
@@ -85,7 +92,19 @@ export class UserSearchComponent implements OnInit {
 
   clearSearch(): void {
     this.searchQuery.set('');
-    this.searchResults.set([]);
+    this.selectedDepartment.set('ALL');
+    this.selectedPresence.set('ALL');
+    this.loadDirectory();
+  }
+
+  setDepartment(dept: string): void {
+    this.selectedDepartment.set(dept);
+    this.loadDirectory();
+  }
+
+  setPresence(presence: string): void {
+    this.selectedPresence.set(presence);
+    this.loadDirectory();
   }
 
   viewProfile(user: User): void {
@@ -100,17 +119,17 @@ export class UserSearchComponent implements OnInit {
 
   startConversation(user: User): void {
     this.isCreatingChat.set(true);
-    this.conversationSuccess.set(null);
 
     this.conversationService.getOrCreateConversation(user._id).subscribe({
       next: (conversation) => {
         this.isCreatingChat.set(false);
+        this.closeProfileModal();
         this.router.navigate(['/chat', conversation._id]);
       },
       error: (err) => {
         this.isCreatingChat.set(false);
         console.error('Failed to initiate conversation:', err);
-      }
+      },
     });
   }
 }

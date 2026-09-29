@@ -1,0 +1,724 @@
+<div class="tasks-page-container">
+  <div *ngIf="feedback() as fb" class="alert-banner" [class.error]="fb.type === 'error'" [class.success]="fb.type === 'success'">
+    <span>{{ fb.text }}</span>
+    <button (click)="feedback.set(null)" class="alert-close">✕</button>
+  </div>
+
+  
+  <header class="tasks-header-bar glass-card">
+    <div class="header-left">
+      <div class="header-icon-box">📋</div>
+      <div>
+        <h1 class="tasks-page-title">Tasks & Planner</h1>
+        <p class="tasks-page-subtext">
+          <span *ngIf="orgService.currentOrganization() as org">{{ org.name }} &bull; </span>
+          Track projects, sprints, and team deliverables
+        </p>
+      </div>
+    </div>
+
+    <div class="header-right">
+      
+      <div class="view-switcher-pill">
+        <button
+          type="button"
+          class="switch-btn"
+          [class.active]="viewMode() === 'kanban'"
+          (click)="viewMode.set('kanban')"
+          title="Board View"
+        >
+          📊 Board
+        </button>
+        <button
+          type="button"
+          class="switch-btn"
+          [class.active]="viewMode() === 'list'"
+          (click)="viewMode.set('list')"
+          title="List View"
+        >
+          📝 List
+        </button>
+      </div>
+
+      <button type="button" class="btn btn-primary btn-sm btn-create-task" (click)="openCreateModal()">
+        <span>+</span> New Task
+      </button>
+    </div>
+  </header>
+  <section class="tasks-toolbar glass-card">
+    <div class="toolbar-search">
+      <span class="search-icon">🔍</span>
+      <input
+        type="text"
+        class="search-input"
+        placeholder="Search tasks by title, description, or label..."
+        [ngModel]="taskService.searchQuery()"
+        (ngModelChange)="taskService.searchQuery.set($event)"
+      />
+      <button
+        *ngIf="taskService.searchQuery()"
+        type="button"
+        class="clear-search-btn"
+        (click)="taskService.searchQuery.set('')"
+      >
+        ✕
+      </button>
+    </div>
+
+    <div class="toolbar-filters">
+      <div class="filter-pills-row">
+        <button
+          type="button"
+          class="filter-pill"
+          [class.active]="taskService.activeStatusFilter() === 'all'"
+          (click)="taskService.activeStatusFilter.set('all')"
+        >
+          All ({{ taskService.tasks().length }})
+        </button>
+        <button
+          type="button"
+          class="filter-pill"
+          [class.active]="taskService.activeStatusFilter() === 'my'"
+          (click)="taskService.activeStatusFilter.set('my')"
+        >
+          👤 Assigned to Me ({{ taskService.myTasks().length }})
+        </button>
+      </div>
+
+      <div class="filter-select-wrap">
+        <label class="filter-label">Priority:</label>
+        <select
+          class="filter-select"
+          [ngModel]="taskService.priorityFilter()"
+          (ngModelChange)="taskService.priorityFilter.set($event)"
+        >
+          <option value="all">All Priorities</option>
+          <option value="LOW">Low</option>
+          <option value="MEDIUM">Medium</option>
+          <option value="HIGH">High</option>
+          <option value="URGENT">Urgent</option>
+        </select>
+      </div>
+
+      <div class="filter-select-wrap" *ngIf="availableTeams().length > 0">
+        <label class="filter-label">Team:</label>
+        <select
+          class="filter-select"
+          [ngModel]="taskService.teamFilter()"
+          (ngModelChange)="taskService.teamFilter.set($event)"
+        >
+          <option value="all">All Teams</option>
+          <option *ngFor="let t of availableTeams()" [value]="t._id">{{ t.name }}</option>
+        </select>
+      </div>
+    </div>
+  </section>
+
+  <div *ngIf="taskService.isLoading()" class="tasks-loading-state">
+    <div class="loading-spinner"></div>
+    <span>Loading workplace tasks...</span>
+  </div>
+
+  <section *ngIf="!taskService.isLoading() && viewMode() === 'kanban'" class="kanban-board-grid">
+    <div class="kanban-column glass-card col-todo">
+      <div class="column-header">
+        <div class="col-title-group">
+          <span class="col-indicator todo"></span>
+          <h2 class="col-heading">To Do</h2>
+          <span class="col-count-badge">{{ taskService.todoTasks().length }}</span>
+        </div>
+        <button type="button" class="col-add-btn" (click)="openCreateModal('TODO')" title="Add to To Do">+</button>
+      </div>
+
+      <div class="column-cards-list">
+        <div
+          *ngFor="let task of taskService.todoTasks()"
+          class="task-card"
+          (click)="openTaskDetails(task)"
+        >
+          <div class="card-meta-top">
+            <span class="priority-pill" [class]="task.priority.toLowerCase()">{{ task.priority }}</span>
+            <span *ngIf="task.channel && typeof task.channel === 'object'" class="chan-tag">#{{ task.channel.name }}</span>
+          </div>
+
+          <h3 class="card-title">{{ task.title }}</h3>
+          <p *ngIf="task.description" class="card-desc">{{ task.description }}</p>
+
+          <div *ngIf="task.labels && task.labels.length > 0" class="card-labels-row">
+            <span *ngFor="let l of task.labels" class="label-chip">{{ l }}</span>
+          </div>
+
+          <div class="card-footer">
+            <div class="footer-left">
+              <span *ngIf="task.dueDate" class="due-date-badge" [class.overdue]="isOverdue(task.dueDate)">
+                📅 {{ task.dueDate | date:'MMM d' }}
+              </span>
+              <span *ngIf="task.checklist && task.checklist.length > 0" class="checklist-badge">
+                ☑ {{ getCompletedChecklistCount(task) }}/{{ task.checklist.length }}
+              </span>
+            </div>
+            <div class="footer-right">
+              <div class="assignees-stack" *ngIf="task.assignees && task.assignees.length > 0">
+                <ng-container *ngFor="let a of task.assignees.slice(0, 3)">
+                  <img *ngIf="a.profileImage" [src]="a.profileImage | mediaUrl" [alt]="a.name" class="avatar-mini" [title]="a.name" />
+                  <div *ngIf="!a.profileImage" class="avatar-mini-fallback" [title]="a.name">{{ a.name.charAt(0).toUpperCase() }}</div>
+                </ng-container>
+              </div>
+              <button
+                type="button"
+                class="btn-advance-status"
+                (click)="changeTaskStatus(task, 'IN_PROGRESS', $event)"
+                title="Start Task"
+              >
+                ▶
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div *ngIf="taskService.todoTasks().length === 0" class="empty-column-card">
+          <span>No tasks in To Do</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="kanban-column glass-card col-progress">
+      <div class="column-header">
+        <div class="col-title-group">
+          <span class="col-indicator in-progress"></span>
+          <h2 class="col-heading">In Progress</h2>
+          <span class="col-count-badge">{{ taskService.inProgressTasks().length }}</span>
+        </div>
+        <button type="button" class="col-add-btn" (click)="openCreateModal('IN_PROGRESS')" title="Add In Progress Task">+</button>
+      </div>
+
+      <div class="column-cards-list">
+        <div
+          *ngFor="let task of taskService.inProgressTasks()"
+          class="task-card"
+          (click)="openTaskDetails(task)"
+        >
+          <div class="card-meta-top">
+            <span class="priority-pill" [class]="task.priority.toLowerCase()">{{ task.priority }}</span>
+            <span *ngIf="task.channel && typeof task.channel === 'object'" class="chan-tag">#{{ task.channel.name }}</span>
+          </div>
+
+          <h3 class="card-title">{{ task.title }}</h3>
+          <p *ngIf="task.description" class="card-desc">{{ task.description }}</p>
+
+          <div *ngIf="task.labels && task.labels.length > 0" class="card-labels-row">
+            <span *ngFor="let l of task.labels" class="label-chip">{{ l }}</span>
+          </div>
+
+          <div class="card-footer">
+            <div class="footer-left">
+              <span *ngIf="task.dueDate" class="due-date-badge" [class.overdue]="isOverdue(task.dueDate)">
+                📅 {{ task.dueDate | date:'MMM d' }}
+              </span>
+              <span *ngIf="task.checklist && task.checklist.length > 0" class="checklist-badge">
+                ☑ {{ getCompletedChecklistCount(task) }}/{{ task.checklist.length }}
+              </span>
+            </div>
+            <div class="footer-right">
+              <div class="assignees-stack" *ngIf="task.assignees && task.assignees.length > 0">
+                <ng-container *ngFor="let a of task.assignees.slice(0, 3)">
+                  <img *ngIf="a.profileImage" [src]="a.profileImage | mediaUrl" [alt]="a.name" class="avatar-mini" [title]="a.name" />
+                  <div *ngIf="!a.profileImage" class="avatar-mini-fallback" [title]="a.name">{{ a.name.charAt(0).toUpperCase() }}</div>
+                </ng-container>
+              </div>
+              <button
+                type="button"
+                class="btn-advance-status"
+                (click)="changeTaskStatus(task, 'IN_REVIEW', $event)"
+                title="Send for Review"
+              >
+                🔍
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div *ngIf="taskService.inProgressTasks().length === 0" class="empty-column-card">
+          <span>No tasks in progress</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="kanban-column glass-card col-review">
+      <div class="column-header">
+        <div class="col-title-group">
+          <span class="col-indicator in-review"></span>
+          <h2 class="col-heading">In Review</h2>
+          <span class="col-count-badge">{{ taskService.inReviewTasks().length }}</span>
+        </div>
+        <button type="button" class="col-add-btn" (click)="openCreateModal('IN_REVIEW')" title="Add Review Task">+</button>
+      </div>
+
+      <div class="column-cards-list">
+        <div
+          *ngFor="let task of taskService.inReviewTasks()"
+          class="task-card"
+          (click)="openTaskDetails(task)"
+        >
+          <div class="card-meta-top">
+            <span class="priority-pill" [class]="task.priority.toLowerCase()">{{ task.priority }}</span>
+            <span *ngIf="task.channel && typeof task.channel === 'object'" class="chan-tag">#{{ task.channel.name }}</span>
+          </div>
+
+          <h3 class="card-title">{{ task.title }}</h3>
+          <p *ngIf="task.description" class="card-desc">{{ task.description }}</p>
+
+          <div *ngIf="task.labels && task.labels.length > 0" class="card-labels-row">
+            <span *ngFor="let l of task.labels" class="label-chip">{{ l }}</span>
+          </div>
+
+          <div class="card-footer">
+            <div class="footer-left">
+              <span *ngIf="task.dueDate" class="due-date-badge" [class.overdue]="isOverdue(task.dueDate)">
+                📅 {{ task.dueDate | date:'MMM d' }}
+              </span>
+              <span *ngIf="task.checklist && task.checklist.length > 0" class="checklist-badge">
+                ☑ {{ getCompletedChecklistCount(task) }}/{{ task.checklist.length }}
+              </span>
+            </div>
+            <div class="footer-right">
+              <div class="assignees-stack" *ngIf="task.assignees && task.assignees.length > 0">
+                <ng-container *ngFor="let a of task.assignees.slice(0, 3)">
+                  <img *ngIf="a.profileImage" [src]="a.profileImage | mediaUrl" [alt]="a.name" class="avatar-mini" [title]="a.name" />
+                  <div *ngIf="!a.profileImage" class="avatar-mini-fallback" [title]="a.name">{{ a.name.charAt(0).toUpperCase() }}</div>
+                </ng-container>
+              </div>
+              <button
+                type="button"
+                class="btn-advance-status complete-btn"
+                (click)="changeTaskStatus(task, 'COMPLETED', $event)"
+                title="Mark Completed"
+              >
+                ✓
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div *ngIf="taskService.inReviewTasks().length === 0" class="empty-column-card">
+          <span>No tasks in review</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="kanban-column glass-card col-completed">
+      <div class="column-header">
+        <div class="col-title-group">
+          <span class="col-indicator completed"></span>
+          <h2 class="col-heading">Completed</h2>
+          <span class="col-count-badge">{{ taskService.completedTasks().length }}</span>
+        </div>
+      </div>
+
+      <div class="column-cards-list">
+        <div
+          *ngFor="let task of taskService.completedTasks()"
+          class="task-card is-done"
+          (click)="openTaskDetails(task)"
+        >
+          <div class="card-meta-top">
+            <span class="priority-pill" [class]="task.priority.toLowerCase()">{{ task.priority }}</span>
+            <span class="completed-check">✓ Done</span>
+          </div>
+
+          <h3 class="card-title">{{ task.title }}</h3>
+
+          <div class="card-footer">
+            <div class="footer-left">
+              <span *ngIf="task.checklist && task.checklist.length > 0" class="checklist-badge">
+                ☑ {{ getCompletedChecklistCount(task) }}/{{ task.checklist.length }}
+              </span>
+            </div>
+            <div class="footer-right">
+              <button
+                type="button"
+                class="btn-reopen-status"
+                (click)="changeTaskStatus(task, 'TODO', $event)"
+                title="Reopen Task"
+              >
+                ↺
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div *ngIf="taskService.completedTasks().length === 0" class="empty-column-card">
+          <span>No completed tasks yet</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section *ngIf="!taskService.isLoading() && viewMode() === 'list'" class="tasks-list-view glass-card">
+    <table class="tasks-table">
+      <thead>
+        <tr>
+          <th>Status</th>
+          <th>Task Title</th>
+          <th>Priority</th>
+          <th>Team / Channel</th>
+          <th>Due Date</th>
+          <th>Checklist</th>
+          <th>Assignees</th>
+          <th style="text-align: right;">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let task of taskService.filteredTasks()" (click)="openTaskDetails(task)" class="table-task-row">
+          <td (click)="$event.stopPropagation()">
+            <button
+              type="button"
+              class="status-toggle-btn"
+              [class.done]="task.status === 'COMPLETED'"
+              (click)="changeTaskStatus(task, task.status === 'COMPLETED' ? 'TODO' : 'COMPLETED')"
+            >
+              {{ task.status === 'COMPLETED' ? '✓' : '' }}
+            </button>
+          </td>
+          <td>
+            <div class="table-task-title" [class.line-through]="task.status === 'COMPLETED'">
+              {{ task.title }}
+            </div>
+            <div *ngIf="task.description" class="table-task-desc">{{ task.description }}</div>
+          </td>
+          <td>
+            <span class="priority-pill" [class]="task.priority.toLowerCase()">{{ task.priority }}</span>
+          </td>
+          <td>
+            <span *ngIf="task.channel && typeof task.channel === 'object'" class="chan-tag">
+              #{{ task.channel.name }}
+            </span>
+            <span *ngIf="!task.channel && task.team && typeof task.team === 'object'" class="team-tag">
+              {{ task.team.name }}
+            </span>
+            <span *ngIf="!task.channel && !task.team" class="text-muted-tag">Org-wide</span>
+          </td>
+          <td>
+            <span *ngIf="task.dueDate" class="due-date-badge" [class.overdue]="isOverdue(task.dueDate)">
+              {{ task.dueDate | date:'MMM d, y' }}
+            </span>
+            <span *ngIf="!task.dueDate" class="text-muted-tag">-</span>
+          </td>
+          <td>
+            <span *ngIf="task.checklist && task.checklist.length > 0" class="checklist-badge">
+              {{ getCompletedChecklistCount(task) }}/{{ task.checklist.length }}
+            </span>
+            <span *ngIf="!task.checklist || task.checklist.length === 0" class="text-muted-tag">-</span>
+          </td>
+          <td>
+            <div class="assignees-stack" *ngIf="task.assignees && task.assignees.length > 0">
+              <ng-container *ngFor="let a of task.assignees">
+                <img *ngIf="a.profileImage" [src]="a.profileImage | mediaUrl" [alt]="a.name" class="avatar-mini" [title]="a.name" />
+                <div *ngIf="!a.profileImage" class="avatar-mini-fallback" [title]="a.name">{{ a.name.charAt(0).toUpperCase() }}</div>
+              </ng-container>
+            </div>
+            <span *ngIf="!task.assignees || task.assignees.length === 0" class="text-muted-tag">Unassigned</span>
+          </td>
+          <td style="text-align: right;" (click)="$event.stopPropagation()">
+            <button type="button" class="btn-icon-action" (click)="openTaskDetails(task)" title="Edit Task">✏️</button>
+            <button type="button" class="btn-icon-action delete" (click)="deleteTask(task)" title="Delete Task">🗑️</button>
+          </td>
+        </tr>
+
+        <tr *ngIf="taskService.filteredTasks().length === 0">
+          <td colspan="8" class="empty-table-state">
+            <div class="empty-icon">📂</div>
+            <p>No tasks match your selected criteria.</p>
+            <button type="button" class="btn btn-secondary btn-sm" (click)="openCreateModal()">
+              + Create a new task
+            </button>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- CREATE TASK MODAL -->
+  <div *ngIf="isCreateModalOpen()" class="modal-overlay" (click)="closeCreateModal()">
+    <div class="modal-card glass-card" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h2 class="modal-title">Create New Task</h2>
+        <button type="button" class="close-btn" (click)="closeCreateModal()">✕</button>
+      </div>
+
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label">Task Title <span class="required">*</span></label>
+          <input
+            type="text"
+            class="form-input"
+            placeholder="e.g. Implement user mention notifications"
+            [ngModel]="newTitle()"
+            (ngModelChange)="newTitle.set($event)"
+            autofocus
+          />
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Description</label>
+          <textarea
+            rows="3"
+            class="form-textarea"
+            placeholder="Add context, specifications, or links..."
+            [ngModel]="newDescription()"
+            (ngModelChange)="newDescription.set($event)"
+          ></textarea>
+        </div>
+
+        <div class="form-row-2">
+          <div class="form-group">
+            <label class="form-label">Status</label>
+            <select class="form-select" [ngModel]="newStatus()" (ngModelChange)="newStatus.set($event)">
+              <option value="TODO">To Do</option>
+              <option value="IN_PROGRESS">In Progress</option>
+              <option value="IN_REVIEW">In Review</option>
+              <option value="COMPLETED">Completed</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Priority</label>
+            <select class="form-select" [ngModel]="newPriority()" (ngModelChange)="newPriority.set($event)">
+              <option value="LOW">Low</option>
+              <option value="MEDIUM">Medium</option>
+              <option value="HIGH">High</option>
+              <option value="URGENT">Urgent</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-row-2">
+          <div class="form-group">
+            <label class="form-label">Due Date</label>
+            <input
+              type="date"
+              class="form-input"
+              [ngModel]="newDueDate()"
+              (ngModelChange)="newDueDate.set($event)"
+            />
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Team (Optional)</label>
+            <select
+              class="form-select"
+              [ngModel]="newTeamId()"
+              (ngModelChange)="onTeamSelectedForCreate($event)"
+            >
+              <option value="">No Team (Workspace-wide)</option>
+              <option *ngFor="let t of availableTeams()" [value]="t._id">{{ t.name }}</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group" *ngIf="availableChannels().length > 0">
+          <label class="form-label">Channel (Optional)</label>
+          <select
+            class="form-select"
+            [ngModel]="newChannelId()"
+            (ngModelChange)="newChannelId.set($event)"
+          >
+            <option value="">No Channel</option>
+            <option *ngFor="let c of availableChannels()" [value]="c._id">#{{ c.name }}</option>
+          </select>
+        </div>
+
+        <div class="form-group" *ngIf="orgMembers().length > 0">
+          <label class="form-label">Assign To</label>
+          <div class="assignees-picker-grid">
+            <button
+              *ngFor="let m of orgMembers()"
+              type="button"
+              class="assignee-picker-chip"
+              [class.selected]="newAssigneeIds().includes(m._id)"
+              (click)="toggleAssigneeSelection(m._id)"
+            >
+              <img *ngIf="m.profileImage" [src]="m.profileImage | mediaUrl" [alt]="m.name" class="chip-avatar" />
+              <div *ngIf="!m.profileImage" class="chip-avatar-fallback">{{ m.name.charAt(0).toUpperCase() }}</div>
+              <span class="chip-name">{{ m.name }}</span>
+              <span *ngIf="newAssigneeIds().includes(m._id)" class="chip-check">✓</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Subtasks / Checklist (One per line)</label>
+          <textarea
+            rows="2"
+            class="form-textarea"
+            placeholder="Add unit tests&#10;Verify responsive styling&#10;Deploy to staging"
+            [ngModel]="newChecklistText()"
+            (ngModelChange)="newChecklistText.set($event)"
+          ></textarea>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Labels (Comma separated)</label>
+          <input
+            type="text"
+            class="form-input"
+            placeholder="e.g. Frontend, Bug, Sprint 3"
+            [ngModel]="newLabelsText()"
+            (ngModelChange)="newLabelsText.set($event)"
+          />
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" (click)="closeCreateModal()">Cancel</button>
+        <button
+          type="button"
+          class="btn btn-primary"
+          (click)="createTask()"
+          [disabled]="isCreating() || !newTitle().trim()"
+        >
+          {{ isCreating() ? 'Creating...' : 'Create Task' }}
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <aside *ngIf="isDetailDrawerOpen() && activeTask() as task" class="task-details-drawer glass-card">
+    <div class="drawer-header">
+      <div class="drawer-title-meta">
+        <span class="status-badge" [class]="task.status.toLowerCase()">{{ getStatusLabel(task.status) }}</span>
+        <span class="priority-pill" [class]="task.priority.toLowerCase()">{{ task.priority }}</span>
+      </div>
+      <button type="button" class="close-btn" (click)="closeTaskDetails()">✕</button>
+    </div>
+
+    <div class="drawer-body">
+      <h2 class="drawer-task-title">{{ task.title }}</h2>
+
+      <div class="status-changers-bar">
+        <span class="section-subheading">Change Status:</span>
+        <div class="status-btn-group">
+          <button
+            *ngFor="let st of STATUSES"
+            type="button"
+            class="btn-status-pill"
+            [class.active]="task.status === st"
+            (click)="changeTaskStatus(task, st)"
+          >
+            {{ getStatusLabel(st) }}
+          </button>
+        </div>
+      </div>
+
+      <div class="detail-row">
+        <span class="detail-label">Priority</span>
+        <select
+          class="form-select form-select-sm"
+          [ngModel]="task.priority"
+          (ngModelChange)="changeTaskPriority(task, $event)"
+        >
+          <option *ngFor="let p of PRIORITIES" [value]="p">{{ p }}</option>
+        </select>
+      </div>
+
+      <div class="detail-row" *ngIf="task.dueDate">
+        <span class="detail-label">Due Date</span>
+        <span class="detail-value" [class.overdue]="isOverdue(task.dueDate)">
+          📅 {{ task.dueDate | date:'mediumDate' }}
+          <span *ngIf="isOverdue(task.dueDate)" class="overdue-tag">Overdue</span>
+        </span>
+      </div>
+
+      <div class="detail-row" *ngIf="task.team || task.channel">
+        <span class="detail-label">Assigned To Space</span>
+        <span class="detail-value">
+          <span *ngIf="task.team && typeof task.team === 'object'">{{ task.team.name }}</span>
+          <span *ngIf="task.channel && typeof task.channel === 'object'"> &bull; #{{ task.channel.name }}</span>
+        </span>
+      </div>
+
+      <div class="drawer-section">
+        <h3 class="section-subheading">Assignees ({{ task.assignees?.length || 0 }})</h3>
+        <div class="assignees-chips-list" *ngIf="task.assignees && task.assignees.length > 0">
+          <div *ngFor="let a of task.assignees" class="assignee-card-chip">
+            <img *ngIf="a.profileImage" [src]="a.profileImage | mediaUrl" [alt]="a.name" class="chip-avatar" />
+            <div *ngIf="!a.profileImage" class="chip-avatar-fallback">{{ a.name.charAt(0).toUpperCase() }}</div>
+            <div class="chip-text">
+              <span class="chip-name">{{ a.name }}</span>
+              <span *ngIf="a.jobTitle" class="chip-title">{{ a.jobTitle }}</span>
+            </div>
+          </div>
+        </div>
+        <div *ngIf="!task.assignees || task.assignees.length === 0" class="no-assignees-text">
+          No team members assigned yet.
+        </div>
+      </div>
+
+      <div class="drawer-section">
+        <div class="checklist-header">
+          <h3 class="section-subheading">Checklist & Subtasks</h3>
+          <span class="checklist-progress-text" *ngIf="task.checklist && task.checklist.length > 0">
+            {{ getCompletedChecklistCount(task) }} of {{ task.checklist.length }} completed
+          </span>
+        </div>
+
+        <div class="checklist-items-list" *ngIf="task.checklist && task.checklist.length > 0">
+          <div
+            *ngFor="let item of task.checklist"
+            class="checklist-item-row"
+            [class.completed]="item.isCompleted"
+            (click)="toggleChecklist(task, item._id, $event)"
+          >
+            <input
+              type="checkbox"
+              [checked]="item.isCompleted"
+              (click)="$event.stopPropagation(); toggleChecklist(task, item._id)"
+              class="checklist-checkbox"
+            />
+            <span class="checklist-item-title">{{ item.title }}</span>
+          </div>
+        </div>
+
+        <div class="add-checklist-input-group">
+          <input
+            type="text"
+            class="form-input form-input-sm"
+            placeholder="Add subtask..."
+            [ngModel]="newChecklistItemTitle()"
+            (ngModelChange)="newChecklistItemTitle.set($event)"
+            (keydown.enter)="addChecklistItem(task)"
+          />
+          <button
+            type="button"
+            class="btn btn-secondary btn-sm"
+            (click)="addChecklistItem(task)"
+            [disabled]="!newChecklistItemTitle().trim()"
+          >
+            Add
+          </button>
+        </div>
+      </div>
+
+      <div class="drawer-section" *ngIf="task.description">
+        <h3 class="section-subheading">Description</h3>
+        <p class="drawer-desc-text">{{ task.description }}</p>
+      </div>
+      <div class="drawer-section" *ngIf="task.labels && task.labels.length > 0">
+        <h3 class="section-subheading">Labels</h3>
+        <div class="labels-list">
+          <span *ngFor="let l of task.labels" class="label-chip">{{ l }}</span>
+        </div>
+      </div>
+
+      <div class="drawer-footer-meta">
+        <span>Created by <strong>{{ typeof task.creator === 'object' ? task.creator.name : 'Teammate' }}</strong></span>
+        <span>{{ task.createdAt | date:'medium' }}</span>
+      </div>
+      <div class="drawer-actions">
+        <button type="button" class="btn-delete-task" (click)="deleteTask(task)">
+          🗑️ Delete Task
+        </button>
+      </div>
+    </div>
+  </aside>
+</div>

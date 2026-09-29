@@ -25,7 +25,7 @@ const userSchema = new mongoose.Schema(
       type: String,
       required: [true, 'Please provide a password'],
       minlength: [6, 'Password must be at least 6 characters'],
-      select: false, // Don't return password by default in queries
+      select: false,
     },
     profileImage: {
       type: String,
@@ -48,6 +48,52 @@ const userSchema = new mongoose.Schema(
       dndEnabled: { type: Boolean, default: false },
       previewContent: { type: Boolean, default: true },
     },
+    currentOrganization: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Organization',
+      default: null,
+    },
+    jobTitle: {
+      type: String,
+      default: '',
+      trim: true,
+      maxlength: [100, 'Job title cannot exceed 100 characters'],
+    },
+    department: {
+      type: String,
+      default: '',
+      trim: true,
+      maxlength: [100, 'Department cannot exceed 100 characters'],
+    },
+    bio: {
+      type: String,
+      default: '',
+      trim: true,
+      maxlength: [300, 'Bio cannot exceed 300 characters'],
+    },
+    phone: {
+      type: String,
+      default: '',
+      trim: true,
+      maxlength: [30, 'Phone cannot exceed 30 characters'],
+    },
+    statusMessage: {
+      type: String,
+      default: '',
+      trim: true,
+      maxlength: [100, 'Status message cannot exceed 100 characters'],
+    },
+    statusEmoji: {
+      type: String,
+      default: '',
+      trim: true,
+      maxlength: [10, 'Status emoji cannot exceed 10 characters'],
+    },
+    presenceStatus: {
+      type: String,
+      enum: ['available', 'busy', 'away', 'offline'],
+      default: 'available',
+    },
   },
   {
     timestamps: true,
@@ -65,8 +111,6 @@ const userSchema = new mongoose.Schema(
     },
   }
 );
-
-// Hash password before saving if modified
 userSchema.pre('save', async function (next) {
   if (!this.isModified('password')) {
     return next();
@@ -80,11 +124,12 @@ userSchema.pre('save', async function (next) {
     next(error);
   }
 });
-
-// Compare entered password with hashed password
 userSchema.methods.matchPassword = async function (enteredPassword) {
   return await bcrypt.compare(enteredPassword, this.password);
 };
+
+userSchema.index({ name: 'text', email: 'text', jobTitle: 'text', department: 'text' });
+userSchema.index({ department: 1 });
 
 const User = mongoose.model('User', userSchema);
 

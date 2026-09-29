@@ -1,0 +1,926 @@
+<div class="teams-container">
+  <!-- Feedback Alert Banner -->
+  <div *ngIf="actionFeedback() as feedback" class="alert-banner" [class.success]="feedback.type === 'success'" [class.error]="feedback.type === 'error'">
+    <span class="alert-icon">{{ feedback.type === 'success' ? '✓' : '⚠️' }}</span>
+    <span class="alert-text">{{ feedback.text }}</span>
+    <button (click)="actionFeedback.set(null)" class="alert-close">×</button>
+  </div>
+
+  <!-- Header -->
+  <header class="teams-header">
+    <div>
+      <div class="header-pretitle" *ngIf="orgService.currentOrganization() as org">
+        🏢 {{ org.name }} &bull; Workplace Collaboration
+      </div>
+      <h1 class="header-title">Teams</h1>
+      <p class="header-subtitle">
+        Collaborate with cross-functional teams, departmental units, and project groups across your workplace.
+      </p>
+    </div>
+
+    <button (click)="openCreateModal()" class="btn btn-primary">
+      <span>+ Create Team</span>
+    </button>
+  </header>
+
+  <!-- Statistics Ribbon -->
+  <section class="stats-ribbon">
+    <div class="stat-card glass-card">
+      <span class="stat-num">{{ stats().total }}</span>
+      <span class="stat-label">Total Teams</span>
+    </div>
+    <div class="stat-card glass-card">
+      <span class="stat-num">{{ stats().joined }}</span>
+      <span class="stat-label">My Teams</span>
+    </div>
+    <div class="stat-card glass-card">
+      <span class="stat-num">{{ stats().publicCount }}</span>
+      <span class="stat-label">Public Teams</span>
+    </div>
+    <div class="stat-card glass-card">
+      <span class="stat-num">{{ stats().privateCount }}</span>
+      <span class="stat-label">Private Teams</span>
+    </div>
+  </section>
+
+  <!-- Filter & Search Toolbar -->
+  <section class="toolbar-card glass-card">
+    <div class="search-input-wrap">
+      <span class="search-icon">🔍</span>
+      <input
+        type="text"
+        [ngModel]="searchQuery()"
+        (ngModelChange)="searchQuery.set($event)"
+        placeholder="Filter teams by name or description..."
+        class="team-search-input"
+      />
+      <button *ngIf="searchQuery()" (click)="searchQuery.set('')" class="clear-btn">✕</button>
+    </div>
+
+    <div class="filter-pills">
+      <button
+        class="filter-pill"
+        [class.active]="privacyFilter() === 'ALL'"
+        (click)="privacyFilter.set('ALL')"
+      >
+        All Teams ({{ stats().total }})
+      </button>
+      <button
+        class="filter-pill"
+        [class.active]="privacyFilter() === 'MY_TEAMS'"
+        (click)="privacyFilter.set('MY_TEAMS')"
+      >
+        My Teams ({{ stats().joined }})
+      </button>
+      <button
+        class="filter-pill"
+        [class.active]="privacyFilter() === 'PUBLIC'"
+        (click)="privacyFilter.set('PUBLIC')"
+      >
+        Public ({{ stats().publicCount }})
+      </button>
+      <button
+        class="filter-pill"
+        [class.active]="privacyFilter() === 'PRIVATE'"
+        (click)="privacyFilter.set('PRIVATE')"
+      >
+        Private ({{ stats().privateCount }})
+      </button>
+    </div>
+  </section>
+
+  <!-- Teams Grid -->
+  <main class="teams-grid">
+    <div *ngFor="let team of filteredTeams()" class="team-card glass-card">
+      <div class="team-card-header">
+        <div class="team-icon-wrap">
+          <img *ngIf="team.icon" [src]="team.icon | mediaUrl" alt="Icon" class="team-icon-img" />
+          <div *ngIf="!team.icon" class="team-icon-fallback">
+            {{ team.name.charAt(0).toUpperCase() }}
+          </div>
+        </div>
+
+        <div class="team-title-col">
+          <div class="name-privacy-row">
+            <h3 class="team-name">{{ team.name }}</h3>
+            <span class="privacy-badge" [class.private]="team.privacy === 'PRIVATE'">
+              {{ team.privacy === 'PUBLIC' ? '🌐 Public' : '🔒 Private' }}
+            </span>
+          </div>
+
+          <div class="team-meta">
+            <span>👥 {{ team.membersCount || team.members.length }} members</span>
+            <span *ngIf="team.myRole" class="team-role-pill" [attr.data-role]="team.myRole">
+              {{ team.myRole }}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <p class="team-desc" *ngIf="team.description">{{ team.description }}</p>
+      <p class="team-desc muted" *ngIf="!team.description">No description provided for this team.</p>
+
+      <!-- Members Avatar Preview Row -->
+      <div class="members-preview-row">
+        <div class="avatar-stack">
+          <ng-container *ngFor="let member of team.members.slice(0, 5)">
+            <div class="stack-avatar" [title]="member.user?.name">
+              <img
+                *ngIf="member.user?.profileImage"
+                [src]="member.user.profileImage | mediaUrl"
+                alt="Avatar"
+                class="stack-img"
+              />
+              <span *ngIf="!member.user?.profileImage" class="stack-fallback">
+                {{ member.user?.name?.charAt(0)?.toUpperCase() || '?' }}
+              </span>
+            </div>
+          </ng-container>
+        </div>
+        <span *ngIf="team.members.length > 5" class="stack-more">
+          +{{ team.members.length - 5 }} more
+        </span>
+      </div>
+
+      <!-- Card Actions -->
+      <div class="team-card-actions">
+        <!-- If member, can open details / management -->
+        <button
+          *ngIf="team.isMember"
+          (click)="openTeamDetails(team)"
+          class="btn btn-secondary btn-sm flex-1"
+        >
+          View Team &bull; {{ team.myRole }}
+        </button>
+
+        <!-- If not member and public, show Join button -->
+        <button
+          *ngIf="!team.isMember && team.privacy === 'PUBLIC'"
+          (click)="joinTeam(team)"
+          class="btn btn-primary btn-sm flex-1"
+        >
+          + Join Team
+        </button>
+
+        <!-- If not member and private -->
+        <div *ngIf="!team.isMember && team.privacy === 'PRIVATE'" class="private-locked-pill">
+          🔒 Private Team (Invite Only)
+        </div>
+      </div>
+    </div>
+
+    <!-- Empty State -->
+    <div *ngIf="filteredTeams().length === 0" class="empty-teams glass-card">
+      <span class="empty-icon">👥</span>
+      <h3>No Teams Found</h3>
+      <p>
+        {{ searchQuery() ? 'No teams match your search criteria.' : 'Create departmental teams like Engineering, Marketing, or HR to organize your workplace.' }}
+      </p>
+      <button (click)="openCreateModal()" class="btn btn-primary btn-sm">
+        + Create First Team
+      </button>
+    </div>
+  </main>
+</div>
+
+<!-- MODAL: CREATE TEAM -->
+<div *ngIf="isCreateModalOpen()" class="modal-backdrop" (click)="closeCreateModal()">
+  <div class="modal-card" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h3 class="modal-title">Create Workplace Team</h3>
+      <button class="modal-close-btn" (click)="closeCreateModal()">✕</button>
+    </div>
+
+    <form (ngSubmit)="submitCreateTeam()" class="modal-form">
+      <div *ngIf="createError()" class="form-feedback error">{{ createError() }}</div>
+
+      <div class="form-group">
+        <label class="form-label">Team Name *</label>
+        <input
+          type="text"
+          class="form-input"
+          [ngModel]="newTeamName()"
+          (ngModelChange)="newTeamName.set($event)"
+          name="newTeamName"
+          placeholder="e.g. Engineering, Marketing, HR, Product Design"
+          required
+          autofocus
+        />
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Description (optional)</label>
+        <textarea
+          class="form-textarea"
+          rows="2"
+          [ngModel]="newTeamDesc()"
+          (ngModelChange)="newTeamDesc.set($event)"
+          name="newTeamDesc"
+          placeholder="What will this team work on?"
+        ></textarea>
+      </div>
+
+      <!-- Privacy Selection -->
+      <div class="form-group">
+        <label class="form-label">Privacy Setting</label>
+        <div class="privacy-options">
+          <label class="radio-card" [class.selected]="newTeamPrivacy() === 'PUBLIC'">
+            <input
+              type="radio"
+              name="privacy"
+              value="PUBLIC"
+              [ngModel]="newTeamPrivacy()"
+              (ngModelChange)="newTeamPrivacy.set($event)"
+            />
+            <div class="radio-content">
+              <strong>🌐 Public Team</strong>
+              <span>Anyone in {{ orgService.currentOrganization()?.name }} can discover and join.</span>
+            </div>
+          </label>
+
+          <label class="radio-card" [class.selected]="newTeamPrivacy() === 'PRIVATE'">
+            <input
+              type="radio"
+              name="privacy"
+              value="PRIVATE"
+              [ngModel]="newTeamPrivacy()"
+              (ngModelChange)="newTeamPrivacy.set($event)"
+            />
+            <div class="radio-content">
+              <strong>🔒 Private Team</strong>
+              <span>Only invited members can view channels and team discussions.</span>
+            </div>
+          </label>
+        </div>
+      </div>
+
+      <!-- Initial Members Selection -->
+      <div class="form-group" *ngIf="orgMembers().length > 1">
+        <label class="form-label">Add Initial Teammates (optional)</label>
+        <div class="members-picker-box">
+          <div
+            *ngFor="let member of orgMembers()"
+            class="member-picker-item"
+            [class.selected]="selectedInitialMembers().includes(member._id)"
+            (click)="toggleInitialMember(member._id)"
+          >
+            <div class="picker-avatar">
+              <img *ngIf="member.profileImage" [src]="member.profileImage | mediaUrl" alt="Avatar" class="avatar-mini" />
+              <span *ngIf="!member.profileImage" class="avatar-mini-fallback">{{ member.name.charAt(0).toUpperCase() }}</span>
+            </div>
+            <div class="picker-info">
+              <span class="picker-name">{{ member.name }}</span>
+              <span class="picker-title" *ngIf="member.jobTitle">{{ member.jobTitle }}</span>
+            </div>
+            <span class="picker-check" *ngIf="selectedInitialMembers().includes(member._id)">✓</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-actions">
+        <button type="button" class="btn btn-secondary" (click)="closeCreateModal()">Cancel</button>
+        <button
+          type="submit"
+          class="btn btn-primary"
+          [disabled]="isCreating() || !newTeamName().trim()"
+        >
+          {{ isCreating() ? 'Creating...' : 'Create Team' }}
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- DRAWER: TEAM DETAILS & MANAGEMENT -->
+<div *ngIf="isManageDrawerOpen() && selectedTeam() as team" class="modal-backdrop" (click)="closeTeamDetails()">
+  <div class="modal-card team-detail-modal" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <div class="team-drawer-title-group">
+        <div class="team-icon-mini">{{ team.name.charAt(0).toUpperCase() }}</div>
+        <div>
+          <h3 class="modal-title">{{ team.name }}</h3>
+          <span class="privacy-badge" [class.private]="team.privacy === 'PRIVATE'">
+            {{ team.privacy === 'PUBLIC' ? '🌐 Public Team' : '🔒 Private Team' }}
+          </span>
+        </div>
+      </div>
+      <button class="modal-close-btn" (click)="closeTeamDetails()">✕</button>
+    </div>
+
+    <div class="modal-body">
+      <p class="team-desc-full" *ngIf="team.description">{{ team.description }}</p>
+
+      <!-- Drawer Tabs Switcher -->
+      <div class="team-tabs-bar">
+        <button
+          type="button"
+          class="team-tab-btn"
+          [class.active]="drawerTab() === 'channels'"
+          (click)="drawerTab.set('channels')"
+        >
+          <span class="tab-hash">#</span>
+          <span>Channels ({{ channels().length }})</span>
+        </button>
+        <button
+          type="button"
+          class="team-tab-btn"
+          [class.active]="drawerTab() === 'members'"
+          (click)="drawerTab.set('members')"
+        >
+          <span class="tab-icon">👥</span>
+          <span>Teammates ({{ team.members.length }})</span>
+        </button>
+      </div>
+
+      <!-- TAB 1: CHANNELS -->
+      <div class="drawer-section" *ngIf="drawerTab() === 'channels'">
+        <div class="channels-toolbar">
+          <div class="channel-filter-input-wrap">
+            <span class="filter-hash">🔍</span>
+            <input
+              type="text"
+              class="channel-filter-input"
+              [ngModel]="channelSearchQuery()"
+              (ngModelChange)="channelSearchQuery.set($event)"
+              placeholder="Find channels in this team..."
+            />
+            <button
+              *ngIf="channelSearchQuery()"
+              (click)="channelSearchQuery.set('')"
+              class="clear-mini-btn"
+            >✕</button>
+          </div>
+
+          <div class="channels-action-bar">
+            <div class="channel-type-filters">
+              <button
+                type="button"
+                class="chan-pill"
+                [class.active]="channelTypeFilter() === 'ALL'"
+                (click)="channelTypeFilter.set('ALL')"
+              >All</button>
+              <button
+                type="button"
+                class="chan-pill"
+                [class.active]="channelTypeFilter() === 'PUBLIC'"
+                (click)="channelTypeFilter.set('PUBLIC')"
+              >Public</button>
+              <button
+                type="button"
+                class="chan-pill"
+                [class.active]="channelTypeFilter() === 'PRIVATE'"
+                (click)="channelTypeFilter.set('PRIVATE')"
+              >Private</button>
+            </div>
+
+            <button
+              *ngIf="team.isMember"
+              type="button"
+              (click)="openCreateChannelModal()"
+              class="btn btn-primary btn-xs"
+            >
+              + Create Channel
+            </button>
+          </div>
+        </div>
+
+        <!-- Channels Loading -->
+        <div *ngIf="isLoadingChannels()" class="channels-loading">
+          <span>Loading channels...</span>
+        </div>
+
+        <!-- Channels List -->
+        <div *ngIf="!isLoadingChannels() && filteredChannels().length > 0" class="channels-list">
+          <div *ngFor="let channel of filteredChannels()" class="channel-item-card">
+            <div class="channel-info-col" (click)="openChannelDetails(channel)">
+              <div class="channel-title-row">
+                <span class="channel-hash-icon">{{ channel.type === 'PRIVATE' ? '🔒' : '#' }}</span>
+                <span class="channel-name-text">{{ channel.name }}</span>
+                <span *ngIf="channel.displayName && channel.displayName !== channel.name" class="channel-display-title">
+                  {{ channel.displayName }}
+                </span>
+                <span *ngIf="channel.isDefault" class="channel-badge default">DEFAULT</span>
+                <span class="channel-badge" [class.private]="channel.type === 'PRIVATE'">
+                  {{ channel.type }}
+                </span>
+              </div>
+              <p class="channel-topic" *ngIf="channel.topic">{{ channel.topic }}</p>
+              <p class="channel-desc" *ngIf="!channel.topic && channel.description">{{ channel.description }}</p>
+            </div>
+
+            <div class="channel-actions-col">
+              <a
+                [routerLink]="['/teams', selectedTeam()?._id, 'channels', channel._id]"
+                class="btn-enter-channel"
+                title="Enter Channel Chat"
+              >
+                💬 Chat
+              </a>
+              <button
+                type="button"
+                class="btn-icon-sm"
+                (click)="openChannelDetails(channel)"
+                title="Channel Settings & Members"
+              >
+                ⚙️
+              </button>
+              <button
+                *ngIf="!channel.isDefault && canManageChannel(channel)"
+                type="button"
+                class="btn-icon-sm danger"
+                (click)="deleteChannel(channel)"
+                title="Delete Channel"
+              >
+                🗑️
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Empty Channels State -->
+        <div *ngIf="!isLoadingChannels() && filteredChannels().length === 0" class="empty-channels">
+          <span class="empty-chan-icon">#</span>
+          <p>No channels match your filter.</p>
+          <button
+            *ngIf="team.isMember"
+            (click)="openCreateChannelModal()"
+            class="btn btn-secondary btn-xs"
+          >
+            + Create New Channel
+          </button>
+        </div>
+      </div>
+
+      <!-- TAB 2: MEMBERS -->
+      <div class="drawer-section" *ngIf="drawerTab() === 'members'">
+        <div class="section-title-row">
+          <h4 class="section-label">Team Members ({{ team.members.length }})</h4>
+          <button
+            *ngIf="canManageTeam(team)"
+            (click)="openAddMemberModal()"
+            class="btn btn-primary btn-xs"
+          >
+            + Add Teammate
+          </button>
+        </div>
+
+        <div class="team-members-list">
+          <div *ngFor="let member of team.members" class="team-member-item">
+            <div class="member-avatar-cell">
+              <div class="avatar-wrap">
+                <img
+                  *ngIf="member.user?.profileImage"
+                  [src]="member.user.profileImage | mediaUrl"
+                  alt="Avatar"
+                  class="avatar-img"
+                />
+                <div *ngIf="!member.user?.profileImage" class="avatar-fallback">
+                  {{ member.user?.name?.charAt(0)?.toUpperCase() || '?' }}
+                </div>
+                <span class="presence-dot" [class.online]="member.user?.isOnline"></span>
+              </div>
+              <div class="member-details">
+                <span class="member-name">{{ member.user?.name }}</span>
+                <span class="member-sub" *ngIf="member.user?.jobTitle">{{ member.user?.jobTitle }}</span>
+                <span class="member-sub email" *ngIf="!member.user?.jobTitle">{{ member.user?.email }}</span>
+              </div>
+            </div>
+
+            <div class="member-role-cell">
+              <!-- If Lead, can change role -->
+              <select
+                *ngIf="canManageTeam(team) && authService.currentUser()?._id !== member.user?._id; else staticTeamRole"
+                class="role-select"
+                [attr.data-role]="member.role"
+                [ngModel]="member.role"
+                (ngModelChange)="onChangeRole(member, $event)"
+              >
+                <option *ngFor="let r of availableRoles" [value]="r">{{ r }}</option>
+              </select>
+
+              <ng-template #staticTeamRole>
+                <span class="team-role-pill" [attr.data-role]="member.role">
+                  {{ member.role }}
+                </span>
+              </ng-template>
+
+              <!-- Remove / Leave Button -->
+              <button
+                *ngIf="canManageTeam(team) || authService.currentUser()?._id === member.user?._id"
+                (click)="confirmRemoveMember(member)"
+                class="btn-remove-sm"
+                [title]="authService.currentUser()?._id === member.user?._id ? 'Leave Team' : 'Remove Member'"
+              >
+                ✕
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Danger Zone for Team Leads -->
+        <div class="drawer-danger-zone" *ngIf="canManageTeam(team)">
+          <h4 class="section-label danger">Team Actions</h4>
+          <button (click)="confirmDeleteTeam(team)" class="btn-danger-outline">
+            Delete Team
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: ADD TEAM MEMBER -->
+<div *ngIf="isAddMemberModalOpen()" class="modal-backdrop" (click)="closeAddMemberModal()">
+  <div class="modal-card" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h3 class="modal-title">Add Teammate to {{ selectedTeam()?.name }}</h3>
+      <button class="modal-close-btn" (click)="closeAddMemberModal()">✕</button>
+    </div>
+
+    <form (ngSubmit)="submitAddMember()" class="modal-form">
+      <div *ngIf="addMemberError()" class="form-feedback error">{{ addMemberError() }}</div>
+
+      <div class="form-group">
+        <label class="form-label">Search Workplace Colleagues *</label>
+        <input
+          type="text"
+          class="form-input"
+          [ngModel]="addMemberQuery()"
+          (ngModelChange)="addMemberQuery.set($event)"
+          name="addMemberQuery"
+          placeholder="Filter by name or email..."
+          autocomplete="off"
+        />
+
+        <!-- Colleagues Picker List -->
+        <div class="available-members-box">
+          <div
+            *ngFor="let user of getAvailableOrgMembersForTeam()"
+            (click)="selectUserToAdd(user)"
+            class="member-picker-item"
+            [class.selected]="selectedUserToAdd()?._id === user._id"
+          >
+            <div class="picker-avatar">
+              <img *ngIf="user.profileImage" [src]="user.profileImage | mediaUrl" alt="Avatar" class="avatar-mini" />
+              <span *ngIf="!user.profileImage" class="avatar-mini-fallback">{{ user.name.charAt(0).toUpperCase() }}</span>
+            </div>
+            <div class="picker-info">
+              <span class="picker-name">{{ user.name }}</span>
+              <span class="picker-title">{{ user.jobTitle || user.email }}</span>
+            </div>
+            <span class="picker-check" *ngIf="selectedUserToAdd()?._id === user._id">✓</span>
+          </div>
+
+          <div *ngIf="getAvailableOrgMembersForTeam().length === 0" class="empty-picker-notice">
+            No colleagues available to add. All workspace members may already be in this team.
+          </div>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Team Role</label>
+        <select
+          class="form-select"
+          [ngModel]="addMemberRole()"
+          (ngModelChange)="addMemberRole.set($event)"
+          name="addMemberRole"
+        >
+          <option value="MEMBER">MEMBER — Standard team participation</option>
+          <option value="ADMIN">ADMIN — Can manage team members</option>
+          <option value="LEAD">LEAD — Full management of this team</option>
+        </select>
+      </div>
+
+      <div class="modal-actions">
+        <button type="button" class="btn btn-secondary" (click)="closeAddMemberModal()">Cancel</button>
+        <button type="submit" class="btn btn-primary" [disabled]="isAddingMember() || !selectedUserToAdd()">
+          {{ isAddingMember() ? 'Adding...' : 'Add to Team' }}
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- MODAL: CREATE CHANNEL -->
+<div *ngIf="isCreateChannelModalOpen()" class="modal-backdrop" (click)="closeCreateChannelModal()">
+  <div class="modal-card" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h3 class="modal-title">Create Channel in {{ selectedTeam()?.name }}</h3>
+      <button class="modal-close-btn" (click)="closeCreateChannelModal()">✕</button>
+    </div>
+
+    <form (ngSubmit)="submitCreateChannel()" class="modal-form">
+      <div *ngIf="createChannelError()" class="form-feedback error">{{ createChannelError() }}</div>
+
+      <!-- Channel Name & Live Slug Preview -->
+      <div class="form-group">
+        <label class="form-label">Channel Name *</label>
+        <div class="channel-slug-input-wrap">
+          <span class="hash-prefix">#</span>
+          <input
+            type="text"
+            class="form-input slug-input"
+            [ngModel]="newChannelName()"
+            (ngModelChange)="newChannelName.set($event)"
+            name="newChannelName"
+            placeholder="e.g. announcements, sprint-planning, general"
+            required
+            autofocus
+          />
+        </div>
+        <span class="field-hint" *ngIf="newChannelName()">
+          Channel slug: <strong>#{{ cleanChannelSlug(newChannelName()) }}</strong>
+        </span>
+      </div>
+
+      <!-- Display Name / Title -->
+      <div class="form-group">
+        <label class="form-label">Display Title (optional)</label>
+        <input
+          type="text"
+          class="form-input"
+          [ngModel]="newChannelDisplayName()"
+          (ngModelChange)="newChannelDisplayName.set($event)"
+          name="newChannelDisplayName"
+          placeholder="e.g. Announcements & Updates"
+        />
+      </div>
+
+      <!-- Topic -->
+      <div class="form-group">
+        <label class="form-label">Channel Topic (optional)</label>
+        <input
+          type="text"
+          class="form-input"
+          [ngModel]="newChannelTopic()"
+          (ngModelChange)="newChannelTopic.set($event)"
+          name="newChannelTopic"
+          placeholder="e.g. Daily sprint discussions, standups, and blockers"
+        />
+      </div>
+
+      <!-- Description -->
+      <div class="form-group">
+        <label class="form-label">Description (optional)</label>
+        <textarea
+          class="form-textarea"
+          rows="2"
+          [ngModel]="newChannelDesc()"
+          (ngModelChange)="newChannelDesc.set($event)"
+          name="newChannelDesc"
+          placeholder="What is this channel used for?"
+        ></textarea>
+      </div>
+
+      <!-- Privacy Selection -->
+      <div class="form-group">
+        <label class="form-label">Channel Privacy</label>
+        <div class="privacy-options">
+          <label class="radio-card" [class.selected]="newChannelType() === 'PUBLIC'">
+            <input
+              type="radio"
+              name="chanPrivacy"
+              value="PUBLIC"
+              [ngModel]="newChannelType()"
+              (ngModelChange)="newChannelType.set($event)"
+            />
+            <div class="radio-content">
+              <strong># Public Channel</strong>
+              <span>Any member of {{ selectedTeam()?.name }} can view and join.</span>
+            </div>
+          </label>
+
+          <label class="radio-card" [class.selected]="newChannelType() === 'PRIVATE'">
+            <input
+              type="radio"
+              name="chanPrivacy"
+              value="PRIVATE"
+              [ngModel]="newChannelType()"
+              (ngModelChange)="newChannelType.set($event)"
+            />
+            <div class="radio-content">
+              <strong>🔒 Private Channel</strong>
+              <span>Only invited teammates will be able to see this channel.</span>
+            </div>
+          </label>
+        </div>
+      </div>
+
+      <!-- Private Channel Initial Members -->
+      <div class="form-group" *ngIf="newChannelType() === 'PRIVATE' && currentTeamMembers().length > 1">
+        <label class="form-label">Select Initial Teammates</label>
+        <div class="members-picker-box">
+          <div
+            *ngFor="let member of currentTeamMembers()"
+            class="member-picker-item"
+            [class.selected]="selectedChannelMembers().includes(member._id)"
+            (click)="toggleChannelMemberSelection(member._id)"
+          >
+            <div class="picker-avatar">
+              <img *ngIf="member.profileImage" [src]="member.profileImage | mediaUrl" alt="Avatar" class="avatar-mini" />
+              <span *ngIf="!member.profileImage" class="avatar-mini-fallback">{{ member.name.charAt(0).toUpperCase() }}</span>
+            </div>
+            <div class="picker-info">
+              <span class="picker-name">{{ member.name }}</span>
+              <span class="picker-title" *ngIf="member.jobTitle">{{ member.jobTitle }}</span>
+            </div>
+            <span class="picker-check" *ngIf="selectedChannelMembers().includes(member._id)">✓</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-actions">
+        <button type="button" class="btn btn-secondary" (click)="closeCreateChannelModal()">Cancel</button>
+        <button
+          type="submit"
+          class="btn btn-primary"
+          [disabled]="isCreatingChannel() || !newChannelName().trim()"
+        >
+          {{ isCreatingChannel() ? 'Creating...' : 'Create Channel' }}
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- MODAL: CHANNEL DETAILS & SETTINGS -->
+<div *ngIf="isChannelDetailsModalOpen() && selectedChannel() as channel" class="modal-backdrop" (click)="closeChannelDetails()">
+  <div class="modal-card channel-detail-modal" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <div class="channel-detail-title-group">
+        <span class="channel-hash-large">{{ channel.type === 'PRIVATE' ? '🔒' : '#' }}</span>
+        <div>
+          <h3 class="modal-title">{{ channel.name }}</h3>
+          <span class="channel-badge" [class.private]="channel.type === 'PRIVATE'">
+            {{ channel.type }} CHANNEL
+          </span>
+          <span *ngIf="channel.isDefault" class="channel-badge default">DEFAULT CHANNEL</span>
+        </div>
+      </div>
+      <button class="modal-close-btn" (click)="closeChannelDetails()">✕</button>
+    </div>
+
+    <div class="modal-body">
+      <div *ngIf="editChannelError()" class="form-feedback error">{{ editChannelError() }}</div>
+
+      <!-- Settings Form -->
+      <form (ngSubmit)="submitEditChannel()" class="modal-form">
+        <div class="form-group">
+          <label class="form-label">Display Title</label>
+          <input
+            type="text"
+            class="form-input"
+            [ngModel]="editChannelDisplayName()"
+            (ngModelChange)="editChannelDisplayName.set($event)"
+            name="editChannelDisplayName"
+            [disabled]="!canManageChannel(channel)"
+          />
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Channel Topic</label>
+          <input
+            type="text"
+            class="form-input"
+            [ngModel]="editChannelTopic()"
+            (ngModelChange)="editChannelTopic.set($event)"
+            name="editChannelTopic"
+            placeholder="Add a topic to let teammates know what this channel is for"
+            [disabled]="!canManageChannel(channel)"
+          />
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Description</label>
+          <textarea
+            class="form-textarea"
+            rows="2"
+            [ngModel]="editChannelDesc()"
+            (ngModelChange)="editChannelDesc.set($event)"
+            name="editChannelDesc"
+            [disabled]="!canManageChannel(channel)"
+          ></textarea>
+        </div>
+
+        <div class="modal-actions" *ngIf="canManageChannel(channel)">
+          <button type="submit" class="btn btn-primary btn-sm" [disabled]="isEditingChannel()">
+            {{ isEditingChannel() ? 'Saving...' : 'Save Settings' }}
+          </button>
+        </div>
+      </form>
+
+      <!-- Private Channel Roster (if PRIVATE) -->
+      <div class="drawer-section mt-4" *ngIf="channel.type === 'PRIVATE'">
+        <div class="section-title-row">
+          <h4 class="section-label">Channel Members ({{ channel.members.length }})</h4>
+          <button
+            *ngIf="canManageChannel(channel)"
+            (click)="openAddChannelMemberModal()"
+            class="btn btn-primary btn-xs"
+          >
+            + Add Teammate
+          </button>
+        </div>
+
+        <div class="team-members-list">
+          <div *ngFor="let member of channel.members" class="team-member-item">
+            <div class="member-avatar-cell">
+              <div class="avatar-wrap">
+                <img
+                  *ngIf="member.user?.profileImage"
+                  [src]="member.user.profileImage | mediaUrl"
+                  alt="Avatar"
+                  class="avatar-img"
+                />
+                <div *ngIf="!member.user?.profileImage" class="avatar-fallback">
+                  {{ member.user?.name?.charAt(0)?.toUpperCase() || '?' }}
+                </div>
+              </div>
+              <div class="member-details">
+                <span class="member-name">{{ member.user?.name }}</span>
+                <span class="member-sub">{{ member.role }}</span>
+              </div>
+            </div>
+
+            <div class="member-role-cell">
+              <button
+                *ngIf="canManageChannel(channel) || authService.currentUser()?._id === member.user?._id"
+                (click)="removeChannelMember(member)"
+                class="btn-remove-sm"
+                [title]="authService.currentUser()?._id === member.user?._id ? 'Leave Channel' : 'Remove Teammate'"
+              >
+                ✕
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Delete Danger Zone -->
+      <div class="drawer-danger-zone mt-4" *ngIf="!channel.isDefault && canManageChannel(channel)">
+        <h4 class="section-label danger">Channel Actions</h4>
+        <button (click)="deleteChannel(channel)" class="btn-danger-outline">
+          Delete Channel #{{ channel.name }}
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: ADD MEMBER TO PRIVATE CHANNEL -->
+<div *ngIf="isAddChannelMemberOpen()" class="modal-backdrop" (click)="closeAddChannelMemberModal()">
+  <div class="modal-card" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h3 class="modal-title">Add Teammate to #{{ selectedChannel()?.name }}</h3>
+      <button class="modal-close-btn" (click)="closeAddChannelMemberModal()">✕</button>
+    </div>
+
+    <form (ngSubmit)="submitAddChannelMember()" class="modal-form">
+      <div *ngIf="addChannelMemberError()" class="form-feedback error">{{ addChannelMemberError() }}</div>
+
+      <div class="form-group">
+        <label class="form-label">Select Team Member</label>
+        <input
+          type="text"
+          class="form-input"
+          [ngModel]="addChannelMemberQuery()"
+          (ngModelChange)="addChannelMemberQuery.set($event)"
+          name="addChannelMemberQuery"
+          placeholder="Search team members..."
+          autocomplete="off"
+        />
+
+        <div class="available-members-box">
+          <div
+            *ngFor="let user of availableTeamMembersForSelectedChannel()"
+            (click)="selectChannelUserToAdd(user)"
+            class="member-picker-item"
+            [class.selected]="selectedChannelUserToAdd()?._id === user._id"
+          >
+            <div class="picker-avatar">
+              <img *ngIf="user.profileImage" [src]="user.profileImage | mediaUrl" alt="Avatar" class="avatar-mini" />
+              <span *ngIf="!user.profileImage" class="avatar-mini-fallback">{{ user.name.charAt(0).toUpperCase() }}</span>
+            </div>
+            <div class="picker-info">
+              <span class="picker-name">{{ user.name }}</span>
+              <span class="picker-title">{{ user.jobTitle || user.email }}</span>
+            </div>
+            <span class="picker-check" *ngIf="selectedChannelUserToAdd()?._id === user._id">✓</span>
+          </div>
+
+          <div *ngIf="availableTeamMembersForSelectedChannel().length === 0" class="empty-picker-notice">
+            All team members already have access to this channel.
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-actions">
+        <button type="button" class="btn btn-secondary" (click)="closeAddChannelMemberModal()">Cancel</button>
+        <button type="submit" class="btn btn-primary" [disabled]="isAddingChannelMember() || !selectedChannelUserToAdd()">
+          {{ isAddingChannelMember() ? 'Adding...' : 'Add to Channel' }}
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+

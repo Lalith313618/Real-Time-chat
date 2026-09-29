@@ -253,7 +253,9 @@ export class ChatComponent implements OnInit, OnDestroy, AfterViewChecked {
         }
 
         // Update preview in sidebar and move conversation to top
-        this.updateConversationSidebar(newMsg.conversationId, newMsg.content || '[Attachment]');
+        if (newMsg.conversationId) {
+          this.updateConversationSidebar(newMsg.conversationId, newMsg.content || '[Attachment]');
+        }
       })
     );
 
@@ -963,7 +965,7 @@ export class ChatComponent implements OnInit, OnDestroy, AfterViewChecked {
     try {
       await this.socketService.emitDeleteMessage({
         messageId: message._id,
-        conversationId: message.conversationId
+        conversationId: message.conversationId || ''
       });
     } catch {
       // Fallback to REST

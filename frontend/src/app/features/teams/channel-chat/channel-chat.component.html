@@ -1,0 +1,853 @@
+<div class="channel-workspace-layout" (click)="closeReactionPicker()">
+  <!-- Feedback banner -->
+  <div *ngIf="feedback() as fb" class="alert-banner" [class.error]="fb.type === 'error'" [class.success]="fb.type === 'success'">
+    <span>{{ fb.text }}</span>
+    <button (click)="feedback.set(null)" class="alert-close">✕</button>
+  </div>
+
+  <!-- Real-Time Mention Notification Toast -->
+  <div
+    *ngIf="activeMentionAlert() as alert"
+    class="mention-toast-alert"
+    (click)="dismissMentionAlert()"
+  >
+    <div class="toast-icon">📣</div>
+    <div class="toast-body">
+      <div class="toast-title">
+        <strong>{{ alert.sender?.name || 'Teammate' }}</strong> mentioned you
+        <span *ngIf="alert.channelName">in #{{ alert.channelName }}</span>
+      </div>
+      <div class="toast-content">{{ alert.content }}</div>
+    </div>
+    <button class="toast-close-btn" (click)="dismissMentionAlert(); $event.stopPropagation()">✕</button>
+  </div>
+
+  <!-- LEFT: CHANNELS SIDEBAR -->
+  <aside class="channels-sidebar glass-card">
+    <div class="team-header-panel">
+      <a routerLink="/teams" class="back-teams-link" title="Back to All Teams">
+        ← All Teams
+      </a>
+      <div class="team-title-row" *ngIf="team() as t">
+        <div class="team-mini-badge">{{ t.name.charAt(0).toUpperCase() }}</div>
+        <div class="team-title-text">
+          <h2 class="team-heading">{{ t.name }}</h2>
+          <span class="team-subtext">{{ t.privacy }} &bull; {{ t.members.length }} members</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="sidebar-section-title">
+      <span>CHANNELS</span>
+      <span class="count-badge">{{ channels().length }}</span>
+    </div>
+
+    <!-- Channels Navigation List -->
+    <nav class="channels-nav" aria-label="Team Channels">
+      <button
+        *ngFor="let chan of channels()"
+        (click)="switchChannel(chan)"
+        class="chan-nav-item"
+        [class.active]="chan._id === channelId()"
+      >
+        <span class="chan-hash">{{ chan.type === 'PRIVATE' ? '🔒' : '#' }}</span>
+        <span class="chan-name">{{ chan.name }}</span>
+        <span *ngIf="chan.isDefault" class="mini-tag">DEFAULT</span>
+      </button>
+    </nav>
+  </aside>
+
+  <!-- MAIN: REAL-TIME CHANNEL CHAT STREAM -->
+  <main class="channel-chat-main glass-card">
+    <!-- Channel Header Bar -->
+    <header class="channel-header-bar" *ngIf="activeChannel() as chan">
+      <div class="chan-header-left">
+        <div class="chan-title-group">
+          <span class="chan-hash-big">{{ chan.type === 'PRIVATE' ? '🔒' : '#' }}</span>
+          <h1 class="chan-header-title">{{ chan.name }}</h1>
+          <span *ngIf="chan.displayName && chan.displayName !== chan.name" class="chan-disp-title">
+            &bull; {{ chan.displayName }}
+          </span>
+        </div>
+        <p class="chan-topic-text" *ngIf="chan.topic">
+          <span class="topic-label">Topic:</span> {{ chan.topic }}
+        </p>
+      </div>
+
+      <div class="chan-header-right">
+        <span class="members-pill" title="Members with access">
+          👥 {{ chan.membersCount || chan.members.length }}
+        </span>
+        <button
+          type="button"
+          class="btn-drawer-toggle"
+          [class.active]="isFilesDrawerOpen()"
+          (click)="toggleFilesDrawer()"
+          title="Channel Files & Media"
+        >
+          📁 Files
+        </button>
+        <a
+          [routerLink]="['/tasks']"
+          [queryParams]="{ teamId: teamId(), channelId: chan._id }"
+          class="btn-drawer-toggle"
+          title="Channel Tasks & Planner"
+          style="text-decoration: none;"
+        >
+          📋 Tasks
+        </a>
+        <button
+          type="button"
+          class="btn-drawer-toggle"
+          [class.active]="isDetailsDrawerOpen()"
+          (click)="isDetailsDrawerOpen.set(!isDetailsDrawerOpen()); isFilesDrawerOpen.set(false)"
+          title="Channel Information"
+        >
+          ℹ️ Info
+        </button>
+      </div>
+    </header>
+
+    <!-- Message Feed -->
+    <div #messagesScrollContainer class="channel-messages-viewport">
+      <!-- Loading indicator -->
+      <div *ngIf="channelService.isLoadingMessages()" class="feed-loading">
+        Loading messages in #{{ activeChannel()?.name }}...
+      </div>
+
+      <!-- Welcome / Empty Banner -->
+      <div *ngIf="!channelService.isLoadingMessages() && channelService.activeChannelMessages().length === 0" class="welcome-channel-card">
+        <div class="welcome-hash">{{ activeChannel()?.type === 'PRIVATE' ? '🔒' : '#' }}</div>
+        <h3>Welcome to #{{ activeChannel()?.name }}!</h3>
+        <p>This is the very beginning of the <strong>#{{ activeChannel()?.name }}</strong> channel.</p>
+        <p *ngIf="activeChannel()?.topic" class="welcome-topic">"{{ activeChannel()?.topic }}"</p>
+        <span class="welcome-hint">Send a message below to kick off collaboration with your team.</span>
+      </div>
+
+      <!-- Messages Stream -->
+      <div *ngIf="!channelService.isLoadingMessages() && channelService.activeChannelMessages().length > 0" class="messages-list">
+        <div
+          *ngFor="let msg of channelService.activeChannelMessages()"
+          class="message-row"
+          [class.my-message]="isMyMessage(msg)"
+        >
+          <!-- Sender Avatar -->
+          <div class="msg-avatar-col">
+            <ng-container *ngIf="msg.sender && typeof msg.sender === 'object'; else stringSenderAvatar">
+              <img
+                *ngIf="msg.sender.profileImage"
+                [src]="msg.sender.profileImage | mediaUrl"
+                alt="Avatar"
+                class="msg-avatar-img"
+              />
+              <div *ngIf="!msg.sender.profileImage" class="msg-avatar-fallback">
+                {{ msg.sender.name ? msg.sender.name.charAt(0).toUpperCase() : '?' }}
+              </div>
+            </ng-container>
+            <ng-template #stringSenderAvatar>
+              <div class="msg-avatar-fallback">?</div>
+            </ng-template>
+          </div>
+
+          <!-- Message Body -->
+          <div class="msg-body-col">
+            <div class="msg-meta-header">
+              <span class="msg-author-name">
+                {{ typeof msg.sender === 'object' ? msg.sender.name : 'Teammate' }}
+              </span>
+              <span *ngIf="typeof msg.sender === 'object' && msg.sender.jobTitle" class="author-title-pill">
+                {{ msg.sender.jobTitle }}
+              </span>
+              <span class="msg-time">{{ msg.createdAt | date:'shortTime' }}</span>
+              <span *ngIf="msg.isEdited" class="edited-tag">(edited)</span>
+              <div class="msg-hover-actions">
+                <button
+                  type="button"
+                  class="msg-action-btn"
+                  (click)="toggleReactionPicker(msg._id, $event)"
+                  title="Add reaction"
+                >
+                  😀
+                </button>
+                <button
+                  type="button"
+                  class="msg-action-btn btn-reply-thread"
+                  (click)="openThread(msg)"
+                  title="Reply in thread"
+                >
+                  💬 Reply
+                </button>
+
+                <!-- Floating Quick Reaction Picker -->
+                <div
+                  *ngIf="activeReactionPickerMsgId() === msg._id"
+                  class="reaction-picker-popover"
+                  (click)="$event.stopPropagation()"
+                >
+                  <button
+                    *ngFor="let emoji of QUICK_REACTIONS"
+                    type="button"
+                    class="picker-emoji-btn"
+                    (click)="toggleReaction(msg, emoji)"
+                  >
+                    {{ emoji }}
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Content Bubble with Optional Media Attachment -->
+            <div class="msg-content-bubble" [class.has-attachment]="msg.fileUrl">
+              <!-- Image Attachment -->
+              <div
+                *ngIf="msg.messageType === 'image' && msg.fileUrl"
+                class="msg-image-attachment"
+                (click)="openLightbox(msg.fileUrl, msg.fileName)"
+                title="Click to view full image"
+              >
+                <img [src]="msg.fileUrl | mediaUrl" [alt]="msg.fileName || 'Image attachment'" class="msg-attached-image" loading="lazy" />
+                <div class="image-overlay-hint">
+                  <span>🔍 Zoom</span>
+                </div>
+              </div>
+
+              <!-- Document / Generic File Attachment -->
+              <div *ngIf="msg.messageType !== 'image' && msg.fileUrl" class="msg-file-attachment">
+                <a [href]="msg.fileUrl | mediaUrl" target="_blank" [download]="msg.fileName || 'download'" class="file-card-link">
+                  <div class="file-icon-wrap">{{ getFileIcon(msg.fileName, msg.messageType) }}</div>
+                  <div class="file-info-wrap">
+                    <span class="file-card-name" [title]="msg.fileName">{{ msg.fileName || 'Attached Document' }}</span>
+                    <span class="file-card-size">{{ formatFileSize(msg.fileSize) }}</span>
+                  </div>
+                  <div class="file-download-btn" title="Download">⬇️</div>
+                </a>
+              </div>
+
+              <!-- Text Content -->
+              <p *ngIf="msg.content && (!msg.fileUrl || msg.content !== msg.fileName)" class="msg-text" [innerHTML]="formatMessageContent(msg.content)"></p>
+            </div>
+
+            <!-- Message Reactions Row -->
+            <div *ngIf="msg.reactions && msg.reactions.length > 0" class="msg-reactions-row">
+              <button
+                *ngFor="let r of msg.reactions"
+                type="button"
+                class="reaction-pill"
+                [class.reacted]="hasUserReacted(r)"
+                (click)="toggleReaction(msg, r.emoji)"
+                [title]="getReactionTooltip(r)"
+              >
+                <span class="reaction-emoji">{{ r.emoji }}</span>
+                <span class="reaction-count">{{ r.users.length }}</span>
+              </button>
+              <button
+                type="button"
+                class="reaction-add-pill"
+                (click)="toggleReactionPicker(msg._id, $event)"
+                title="Add reaction"
+              >
+                +😀
+              </button>
+            </div>
+
+            <!-- Thread Summary Pill (if threadCount > 0) -->
+            <div *ngIf="msg.threadCount && msg.threadCount > 0" class="msg-thread-summary">
+              <button type="button" class="btn-thread-pill" (click)="openThread(msg)">
+                <span class="thread-pill-icon">💬</span>
+                <span class="thread-pill-count">{{ msg.threadCount }} {{ msg.threadCount === 1 ? 'reply' : 'replies' }}</span>
+                <span *ngIf="msg.threadLastReplyAt" class="thread-pill-time">Last reply {{ msg.threadLastReplyAt | date:'shortTime' }}</span>
+                <span class="thread-pill-cta">View thread &rarr;</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Typing Indicator Bar -->
+    <div class="typing-indicator-bar" *ngIf="typingText()">
+      <span class="typing-dots">
+        <span>.</span><span>.</span><span>.</span>
+      </span>
+      <span class="typing-text">{{ typingText() }}</span>
+    </div>
+
+    <!-- Chat Input Area -->
+    <footer class="channel-input-footer">
+      <div class="input-card">
+        <!-- Mention Autocomplete Popover (Main Channel Input) -->
+        <div
+          *ngIf="activeMentionContext() === 'main' && filteredMentionCandidates().length > 0"
+          class="mention-popover"
+          (click)="$event.stopPropagation()"
+        >
+          <div class="mention-popover-header">
+            <span>Members</span>
+            <span class="mention-shortcut-hint">↑↓ to navigate &bull; Enter to select</span>
+          </div>
+          <div class="mention-candidates-list">
+            <button
+              *ngFor="let candidate of filteredMentionCandidates(); let idx = index"
+              type="button"
+              class="mention-candidate-item"
+              [class.selected]="idx === mentionSelectedIndex()"
+              (click)="selectMention(candidate)"
+              (mouseenter)="mentionSelectedIndex.set(idx)"
+            >
+              <div class="candidate-avatar">
+                <img
+                  *ngIf="candidate.profileImage"
+                  [src]="candidate.profileImage | mediaUrl"
+                  alt="Avatar"
+                  class="candidate-img"
+                />
+                <div *ngIf="!candidate.profileImage" class="candidate-fallback">
+                  {{ candidate.name.charAt(0).toUpperCase() }}
+                </div>
+              </div>
+              <div class="candidate-info">
+                <span class="candidate-name">{{ candidate.name }}</span>
+                <span *ngIf="candidate.jobTitle" class="candidate-meta">{{ candidate.jobTitle }}</span>
+              </div>
+              <span class="candidate-role-badge" *ngIf="candidate.role">{{ candidate.role }}</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Staged Attachment Preview (Main Channel) -->
+        <div *ngIf="pendingFile() as pFile" class="attachment-staged-box">
+          <div class="staged-preview-wrap">
+            <img *ngIf="pendingFilePreview() as preview" [src]="preview" alt="Preview" class="staged-thumbnail" />
+            <div *ngIf="!pendingFilePreview()" class="staged-icon">{{ getFileIcon(pFile.name, 'file') }}</div>
+          </div>
+          <div class="staged-meta">
+            <span class="staged-filename" [title]="pFile.name">{{ pFile.name }}</span>
+            <span class="staged-filesize">{{ formatFileSize(pFile.size) }}</span>
+            <div *ngIf="isUploading()" class="staged-progress-bar">
+              <div class="progress-fill" [style.width.%]="uploadProgress()"></div>
+            </div>
+          </div>
+          <button
+            type="button"
+            class="btn-remove-attachment"
+            (click)="removePendingFile('main')"
+            title="Remove attachment"
+            [disabled]="isUploading()"
+          >
+            ✕
+          </button>
+        </div>
+
+        <textarea
+          rows="2"
+          class="channel-textarea"
+          [placeholder]="'Message #' + (activeChannel()?.name || 'channel') + '... (type @ to mention)'"
+          [ngModel]="messageText()"
+          (ngModelChange)="messageText.set($event)"
+          (input)="onInputChange($event)"
+          (keydown)="onKeyDown($event)"
+          [disabled]="isSending() || isUploading()"
+        ></textarea>
+
+        <div class="input-actions-bar">
+          <div class="input-actions-left">
+            <input
+              #channelFileInput
+              type="file"
+              (change)="onFileSelected($event, 'main')"
+              style="display: none;"
+            />
+            <button
+              type="button"
+              class="btn-action-icon btn-attach"
+              (click)="triggerFileInput('main')"
+              title="Attach file or image"
+              [disabled]="isSending() || isUploading()"
+            >
+              📎 <span class="attach-label">Attach</span>
+            </button>
+            <span class="shortcut-tip">Enter to send &bull; Shift+Enter for new line</span>
+          </div>
+          <button
+            type="button"
+            (click)="sendMessage()"
+            class="btn btn-primary btn-sm btn-send"
+            [disabled]="isSending() || isUploading() || (!messageText().trim() && !pendingFile())"
+          >
+            {{ isSending() || isUploading() ? 'Sending...' : 'Send' }}
+          </button>
+        </div>
+      </div>
+    </footer>
+  </main>
+
+  <!-- RIGHT: CHANNEL DETAILS DRAWER -->
+  <aside *ngIf="isDetailsDrawerOpen() && activeChannel() as chan" class="channel-details-drawer glass-card">
+    <div class="drawer-header">
+      <h3>About #{{ chan.name }}</h3>
+      <button (click)="isDetailsDrawerOpen.set(false)" class="close-btn">✕</button>
+    </div>
+
+    <div class="drawer-content">
+      <div class="info-block">
+        <label class="info-label">Topic</label>
+        <p class="info-value">{{ chan.topic || 'No topic set for this channel.' }}</p>
+      </div>
+
+      <div class="info-block">
+        <label class="info-label">Description</label>
+        <p class="info-value">{{ chan.description || 'No description provided.' }}</p>
+      </div>
+
+      <div class="info-block">
+        <label class="info-label">Privacy</label>
+        <p class="info-value">{{ chan.type === 'PUBLIC' ? '🌐 Public (Team-wide)' : '🔒 Private (Invite-only)' }}</p>
+      </div>
+
+      <div class="info-block">
+        <label class="info-label">Created By</label>
+        <p class="info-value">{{ chan.createdBy?.name || 'Workspace Member' }}</p>
+      </div>
+    </div>
+  </aside>
+
+  <!-- RIGHT: THREAD DRAWER -->
+  <aside *ngIf="isThreadDrawerOpen() && activeThreadRootMessage() as rootMsg" class="thread-drawer glass-card">
+    <div class="drawer-header">
+      <div class="thread-header-meta">
+        <h3 class="thread-drawer-title">Thread</h3>
+        <span class="thread-channel-name">#{{ activeChannel()?.name }}</span>
+      </div>
+      <button (click)="closeThread()" class="close-btn" title="Close Thread">✕</button>
+    </div>
+
+    <!-- Scrollable Messages Container -->
+    <div #threadScrollContainer class="thread-messages-viewport">
+      <!-- Pinned Root Message Card -->
+      <div class="thread-root-card">
+        <div class="msg-avatar-col">
+          <ng-container *ngIf="rootMsg.sender && typeof rootMsg.sender === 'object'; else stringRootAvatar">
+            <img
+              *ngIf="rootMsg.sender.profileImage"
+              [src]="rootMsg.sender.profileImage | mediaUrl"
+              alt="Avatar"
+              class="msg-avatar-img"
+            />
+            <div *ngIf="!rootMsg.sender.profileImage" class="msg-avatar-fallback">
+              {{ rootMsg.sender.name ? rootMsg.sender.name.charAt(0).toUpperCase() : '?' }}
+            </div>
+          </ng-container>
+          <ng-template #stringRootAvatar>
+            <div class="msg-avatar-fallback">?</div>
+          </ng-template>
+        </div>
+
+        <div class="msg-body-col">
+          <div class="msg-meta-header">
+            <span class="msg-author-name">
+              {{ typeof rootMsg.sender === 'object' ? rootMsg.sender.name : 'Teammate' }}
+            </span>
+            <span class="msg-time">{{ rootMsg.createdAt | date:'shortTime' }}</span>
+            <div class="msg-hover-actions">
+              <button
+                type="button"
+                class="msg-action-btn"
+                (click)="toggleReactionPicker(rootMsg._id, $event)"
+                title="Add reaction"
+              >
+                😀
+              </button>
+              <div
+                *ngIf="activeReactionPickerMsgId() === rootMsg._id"
+                class="reaction-picker-popover"
+                (click)="$event.stopPropagation()"
+              >
+                <button
+                  *ngFor="let emoji of QUICK_REACTIONS"
+                  type="button"
+                  class="picker-emoji-btn"
+                  (click)="toggleReaction(rootMsg, emoji)"
+                >
+                  {{ emoji }}
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Root Message Attachment -->
+          <div *ngIf="rootMsg.messageType === 'image' && rootMsg.fileUrl" class="msg-image-attachment" (click)="openLightbox(rootMsg.fileUrl, rootMsg.fileName)" title="Click to view full image">
+            <img [src]="rootMsg.fileUrl | mediaUrl" [alt]="rootMsg.fileName || 'Image attachment'" class="msg-attached-image" loading="lazy" />
+            <div class="image-overlay-hint"><span>🔍 Zoom</span></div>
+          </div>
+          <div *ngIf="rootMsg.messageType !== 'image' && rootMsg.fileUrl" class="msg-file-attachment">
+            <a [href]="rootMsg.fileUrl | mediaUrl" target="_blank" [download]="rootMsg.fileName || 'download'" class="file-card-link">
+              <div class="file-icon-wrap">{{ getFileIcon(rootMsg.fileName, rootMsg.messageType) }}</div>
+              <div class="file-info-wrap">
+                <span class="file-card-name" [title]="rootMsg.fileName">{{ rootMsg.fileName || 'Attached Document' }}</span>
+                <span class="file-card-size">{{ formatFileSize(rootMsg.fileSize) }}</span>
+              </div>
+              <div class="file-download-btn" title="Download">⬇️</div>
+            </a>
+          </div>
+
+          <p *ngIf="rootMsg.content && (!rootMsg.fileUrl || rootMsg.content !== rootMsg.fileName)" class="msg-text" [innerHTML]="formatMessageContent(rootMsg.content)"></p>
+          <div *ngIf="rootMsg.reactions && rootMsg.reactions.length > 0" class="msg-reactions-row">
+            <button
+              *ngFor="let r of rootMsg.reactions"
+              type="button"
+              class="reaction-pill"
+              [class.reacted]="hasUserReacted(r)"
+              (click)="toggleReaction(rootMsg, r.emoji)"
+              [title]="getReactionTooltip(r)"
+            >
+              <span class="reaction-emoji">{{ r.emoji }}</span>
+              <span class="reaction-count">{{ r.users.length }}</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Thread Replies Counter Divider -->
+      <div class="thread-replies-divider">
+        <span class="divider-line"></span>
+        <span class="divider-text">{{ threadReplies().length }} {{ threadReplies().length === 1 ? 'reply' : 'replies' }}</span>
+        <span class="divider-line"></span>
+      </div>
+
+      <!-- Loading State -->
+      <div *ngIf="isLoadingThread()" class="feed-loading">
+        Loading replies...
+      </div>
+
+      <!-- Replies List -->
+      <div *ngIf="!isLoadingThread()" class="thread-replies-list">
+        <div
+          *ngFor="let reply of threadReplies()"
+          class="message-row thread-reply-item"
+          [class.my-message]="isMyMessage(reply)"
+        >
+          <div class="msg-avatar-col">
+            <ng-container *ngIf="reply.sender && typeof reply.sender === 'object'; else stringReplyAvatar">
+              <img
+                *ngIf="reply.sender.profileImage"
+                [src]="reply.sender.profileImage | mediaUrl"
+                alt="Avatar"
+                class="msg-avatar-img"
+              />
+              <div *ngIf="!reply.sender.profileImage" class="msg-avatar-fallback">
+                {{ reply.sender.name ? reply.sender.name.charAt(0).toUpperCase() : '?' }}
+              </div>
+            </ng-container>
+            <ng-template #stringReplyAvatar>
+              <div class="msg-avatar-fallback">?</div>
+            </ng-template>
+          </div>
+
+          <div class="msg-body-col">
+            <div class="msg-meta-header">
+              <span class="msg-author-name">
+                {{ typeof reply.sender === 'object' ? reply.sender.name : 'Teammate' }}
+              </span>
+              <span class="msg-time">{{ reply.createdAt | date:'shortTime' }}</span>
+              <div class="msg-hover-actions">
+                <button
+                  type="button"
+                  class="msg-action-btn"
+                  (click)="toggleReactionPicker(reply._id, $event)"
+                  title="Add reaction"
+                >
+                  😀
+                </button>
+                <div
+                  *ngIf="activeReactionPickerMsgId() === reply._id"
+                  class="reaction-picker-popover"
+                  (click)="$event.stopPropagation()"
+                >
+                  <button
+                    *ngFor="let emoji of QUICK_REACTIONS"
+                    type="button"
+                    class="picker-emoji-btn"
+                    (click)="toggleReaction(reply, emoji)"
+                  >
+                    {{ emoji }}
+                  </button>
+                </div>
+              </div>
+            </div>
+            <div class="msg-content-bubble" [class.has-attachment]="reply.fileUrl">
+              <!-- Reply Image Attachment -->
+              <div
+                *ngIf="reply.messageType === 'image' && reply.fileUrl"
+                class="msg-image-attachment"
+                (click)="openLightbox(reply.fileUrl, reply.fileName)"
+                title="Click to view full image"
+              >
+                <img [src]="reply.fileUrl | mediaUrl" [alt]="reply.fileName || 'Image attachment'" class="msg-attached-image" loading="lazy" />
+                <div class="image-overlay-hint"><span>🔍 Zoom</span></div>
+              </div>
+
+              <!-- Reply File Attachment -->
+              <div *ngIf="reply.messageType !== 'image' && reply.fileUrl" class="msg-file-attachment">
+                <a [href]="reply.fileUrl | mediaUrl" target="_blank" [download]="reply.fileName || 'download'" class="file-card-link">
+                  <div class="file-icon-wrap">{{ getFileIcon(reply.fileName, reply.messageType) }}</div>
+                  <div class="file-info-wrap">
+                    <span class="file-card-name" [title]="reply.fileName">{{ reply.fileName || 'Attached Document' }}</span>
+                    <span class="file-card-size">{{ formatFileSize(reply.fileSize) }}</span>
+                  </div>
+                  <div class="file-download-btn" title="Download">⬇️</div>
+                </a>
+              </div>
+
+              <p *ngIf="reply.content && (!reply.fileUrl || reply.content !== reply.fileName)" class="msg-text" [innerHTML]="formatMessageContent(reply.content)"></p>
+            </div>
+            <!-- Reply Reactions Row -->
+            <div *ngIf="reply.reactions && reply.reactions.length > 0" class="msg-reactions-row">
+              <button
+                *ngFor="let r of reply.reactions"
+                type="button"
+                class="reaction-pill"
+                [class.reacted]="hasUserReacted(r)"
+                (click)="toggleReaction(reply, r.emoji)"
+                [title]="getReactionTooltip(r)"
+              >
+                <span class="reaction-emoji">{{ r.emoji }}</span>
+                <span class="reaction-count">{{ r.users.length }}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Thread Typing Indicator -->
+    <div class="typing-indicator-bar thread-typing-bar" *ngIf="threadTypingText()">
+      <span class="typing-dots"><span>.</span><span>.</span><span>.</span></span>
+      <span class="typing-text">{{ threadTypingText() }}</span>
+    </div>
+
+    <!-- Thread Input Footer -->
+    <footer class="thread-input-footer">
+      <div class="input-card">
+        <!-- Thread Mention Autocomplete Popover -->
+        <div
+          *ngIf="activeMentionContext() === 'thread' && filteredMentionCandidates().length > 0"
+          class="mention-popover thread-mention-popover"
+          (click)="$event.stopPropagation()"
+        >
+          <div class="mention-popover-header">
+            <span>Members</span>
+            <span class="mention-shortcut-hint">↑↓ to navigate &bull; Enter to select</span>
+          </div>
+          <div class="mention-candidates-list">
+            <button
+              *ngFor="let candidate of filteredMentionCandidates(); let idx = index"
+              type="button"
+              class="mention-candidate-item"
+              [class.selected]="idx === mentionSelectedIndex()"
+              (click)="selectThreadMention(candidate)"
+              (mouseenter)="mentionSelectedIndex.set(idx)"
+            >
+              <div class="candidate-avatar">
+                <img
+                  *ngIf="candidate.profileImage"
+                  [src]="candidate.profileImage | mediaUrl"
+                  alt="Avatar"
+                  class="candidate-img"
+                />
+                <div *ngIf="!candidate.profileImage" class="candidate-fallback">
+                  {{ candidate.name.charAt(0).toUpperCase() }}
+                </div>
+              </div>
+              <div class="candidate-info">
+                <span class="candidate-name">{{ candidate.name }}</span>
+                <span *ngIf="candidate.jobTitle" class="candidate-meta">{{ candidate.jobTitle }}</span>
+              </div>
+            </button>
+          </div>
+        </div>
+
+        <!-- Staged Attachment Preview (Thread) -->
+        <div *ngIf="pendingThreadFile() as pFile" class="attachment-staged-box">
+          <div class="staged-preview-wrap">
+            <img *ngIf="pendingThreadFilePreview() as preview" [src]="preview" alt="Preview" class="staged-thumbnail" />
+            <div *ngIf="!pendingThreadFilePreview()" class="staged-icon">{{ getFileIcon(pFile.name, 'file') }}</div>
+          </div>
+          <div class="staged-meta">
+            <span class="staged-filename" [title]="pFile.name">{{ pFile.name }}</span>
+            <span class="staged-filesize">{{ formatFileSize(pFile.size) }}</span>
+            <div *ngIf="isThreadUploading()" class="staged-progress-bar">
+              <div class="progress-fill" [style.width.%]="threadUploadProgress()"></div>
+            </div>
+          </div>
+          <button
+            type="button"
+            class="btn-remove-attachment"
+            (click)="removePendingFile('thread')"
+            title="Remove attachment"
+            [disabled]="isThreadUploading()"
+          >
+            ✕
+          </button>
+        </div>
+
+        <textarea
+          rows="2"
+          class="channel-textarea"
+          placeholder="Reply in thread... (type @ to mention)"
+          [ngModel]="threadReplyText()"
+          (ngModelChange)="threadReplyText.set($event)"
+          (input)="onThreadInputChange($event)"
+          (keydown)="onThreadKeyDown($event)"
+          [disabled]="isSendingThreadReply() || isThreadUploading()"
+        ></textarea>
+        <div class="input-actions-bar">
+          <div class="input-actions-left">
+            <input
+              #threadFileInput
+              type="file"
+              (change)="onFileSelected($event, 'thread')"
+              style="display: none;"
+            />
+            <button
+              type="button"
+              class="btn-action-icon btn-attach"
+              (click)="triggerFileInput('thread')"
+              title="Attach file or image"
+              [disabled]="isSendingThreadReply() || isThreadUploading()"
+            >
+              📎 <span class="attach-label">Attach</span>
+            </button>
+            <span class="shortcut-tip">Enter to reply</span>
+          </div>
+          <button
+            type="button"
+            (click)="sendThreadReply()"
+            class="btn btn-primary btn-sm btn-send"
+            [disabled]="isSendingThreadReply() || isThreadUploading() || (!threadReplyText().trim() && !pendingThreadFile())"
+          >
+            {{ isSendingThreadReply() || isThreadUploading() ? 'Sending...' : 'Reply' }}
+          </button>
+        </div>
+      </div>
+    </footer>
+  </aside>
+
+  <!-- RIGHT: CHANNEL FILES DRAWER -->
+  <aside *ngIf="isFilesDrawerOpen() && activeChannel() as chan" class="channel-files-drawer glass-card">
+    <div class="drawer-header">
+      <div class="files-header-meta">
+        <span class="files-header-icon">📁</span>
+        <div>
+          <h3 class="files-drawer-title">Files in #{{ chan.name }}</h3>
+          <span class="files-header-subtext">{{ filesTotalCount() }} shared {{ filesTotalCount() === 1 ? 'file' : 'files' }}</span>
+        </div>
+      </div>
+      <button (click)="isFilesDrawerOpen.set(false)" class="close-btn" title="Close Drawer">✕</button>
+    </div>
+
+    <!-- Filter Pills -->
+    <div class="files-filter-bar">
+      <button
+        type="button"
+        class="filter-pill"
+        [class.active]="activeFilesFilter() === 'all'"
+        (click)="setFilesFilter('all')"
+      >
+        All ({{ filesTotalCount() }})
+      </button>
+      <button
+        type="button"
+        class="filter-pill"
+        [class.active]="activeFilesFilter() === 'image'"
+        (click)="setFilesFilter('image')"
+      >
+        🖼️ Images
+      </button>
+      <button
+        type="button"
+        class="filter-pill"
+        [class.active]="activeFilesFilter() === 'file'"
+        (click)="setFilesFilter('file')"
+      >
+        📄 Documents
+      </button>
+    </div>
+
+    <!-- Files List Viewport -->
+    <div class="files-list-viewport">
+      <div *ngIf="isLoadingFiles()" class="feed-loading">
+        Loading channel files...
+      </div>
+
+      <div *ngIf="!isLoadingFiles() && channelFiles().length === 0" class="empty-files-card">
+        <div class="empty-files-icon">📂</div>
+        <h4 class="empty-files-title">No files found</h4>
+        <p class="empty-files-desc">Files shared in #{{ chan.name }} or in its threads will show up here.</p>
+        <button type="button" class="btn btn-secondary btn-sm" (click)="triggerFileInput('main')">
+          📎 Attach a file now
+        </button>
+      </div>
+
+      <div *ngIf="!isLoadingFiles() && channelFiles().length > 0" class="files-items-container">
+        <div *ngFor="let fMsg of channelFiles()" class="channel-file-item">
+          <div
+            class="file-item-preview"
+            (click)="fMsg.messageType === 'image' && fMsg.fileUrl ? openLightbox(fMsg.fileUrl, fMsg.fileName) : null"
+            [class.clickable]="fMsg.messageType === 'image'"
+            [title]="fMsg.messageType === 'image' ? 'Click to zoom image' : ''"
+          >
+            <img
+              *ngIf="fMsg.messageType === 'image' && fMsg.fileUrl"
+              [src]="fMsg.fileUrl | mediaUrl"
+              [alt]="fMsg.fileName || 'File thumbnail'"
+              class="file-item-thumb"
+            />
+            <span *ngIf="fMsg.messageType !== 'image'" class="file-item-icon">
+              {{ getFileIcon(fMsg.fileName, fMsg.messageType) }}
+            </span>
+          </div>
+
+          <div class="file-item-info">
+            <span class="file-item-name" [title]="fMsg.fileName">{{ fMsg.fileName || 'Attachment' }}</span>
+            <div class="file-item-meta">
+              <span class="file-size-tag">{{ formatFileSize(fMsg.fileSize) }}</span>
+              <span class="dot-sep">&bull;</span>
+              <span class="uploader-name">{{ typeof fMsg.sender === 'object' ? fMsg.sender.name : 'Teammate' }}</span>
+              <span class="dot-sep">&bull;</span>
+              <span class="file-date">{{ fMsg.createdAt | date:'MMM d' }}</span>
+            </div>
+          </div>
+
+          <div class="file-item-actions">
+            <a
+              *ngIf="fMsg.fileUrl"
+              [href]="fMsg.fileUrl | mediaUrl"
+              target="_blank"
+              [download]="fMsg.fileName || 'download'"
+              class="btn-file-download"
+              title="Download file"
+            >
+              ⬇️
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Fullscreen Lightbox Modal -->
+  <div *ngIf="activeLightboxImage() as lbImg" class="lightbox-overlay" (click)="closeLightbox()">
+    <div class="lightbox-modal" (click)="$event.stopPropagation()">
+      <div class="lightbox-header">
+        <span class="lightbox-title">{{ activeLightboxFileName() || 'Image Preview' }}</span>
+        <div class="lightbox-actions">
+          <a [href]="lbImg | mediaUrl" target="_blank" [download]="activeLightboxFileName() || 'download'" class="lightbox-btn" title="Download">⬇️</a>
+          <button type="button" class="lightbox-btn close" (click)="closeLightbox()" title="Close">✕</button>
+        </div>
+      </div>
+      <div class="lightbox-body">
+        <img [src]="lbImg | mediaUrl" [alt]="activeLightboxFileName() || 'Full image'" class="lightbox-full-img" />
+      </div>
+    </div>
+  </div>
+</div>

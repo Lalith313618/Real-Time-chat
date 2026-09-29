@@ -1,6 +1,112 @@
 const User = require('../models/user.model');
+const Organization = require('../models/organization.model');
 const { uploadFile } = require('../config/cloudinary');
 
+const USER_DIRECTORY_FIELDS =
+  '_id name email profileImage isOnline lastSeen jobTitle department bio phone statusMessage statusEmoji presenceStatus currentOrganization createdAt updatedAt';
+
+// @desc    Workplace User Directory search & filter
+// @route   GET /api/users/directory
+// @access  Private (JWT Protected)
+const getUserDirectory = async (req, res) => {
+  try {
+    const { q = '', department = '', presence = '', orgId } = req.query;
+
+    const targetOrgId = orgId || req.user.currentOrganization;
+    let memberRoleMap = new Map();
+    let userFilter = {};
+
+    if (targetOrgId) {
+      const organization = await Organization.findById(targetOrgId);
+      if (organization) {
+        const memberUserIds = organization.members.map((m) => {
+          memberRoleMap.set(m.user.toString(), m.role);
+          return m.user;
+        });
+        userFilter._id = { $in: memberUserIds };
+      }
+    }
+
+    // Keyword search (name, email, jobTitle, department)
+    if (q && q.trim()) {
+      const sanitized = q.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      userFilter.$or = [
+        { name: { $regex: sanitized, $options: 'i' } },
+        { email: { $regex: sanitized, $options: 'i' } },
+        { jobTitle: { $regex: sanitized, $options: 'i' } },
+        { department: { $regex: sanitized, $options: 'i' } },
+      ];
+    }
+
+    // Department filter
+    if (department && department.trim() && department.toUpperCase() !== 'ALL') {
+      userFilter.department = { $regex: `^${department.trim()}$`, $options: 'i' };
+    }
+
+    // Presence filter
+    if (presence && presence.trim() && presence.toUpperCase() !== 'ALL') {
+      if (presence === 'online') {
+        userFilter.isOnline = true;
+      } else if (presence === 'offline') {
+        userFilter.isOnline = false;
+      } else {
+        userFilter.presenceStatus = presence.toLowerCase();
+      }
+    }
+
+    const users = await User.find(userFilter)
+      .select(USER_DIRECTORY_FIELDS)
+      .sort({ isOnline: -1, name: 1 })
+      .limit(100);
+
+    const enrichedUsers = users.map((u) => {
+      const uObj = u.toObject();
+      return {
+        ...uObj,
+        orgRole: memberRoleMap.get(u._id.toString()) || 'MEMBER',
+      };
+    });
+
+    return res.status(200).json({
+      status: 'success',
+      results: enrichedUsers.length,
+      users: enrichedUsers,
+    });
+  } catch (error) {
+    console.error('[User Directory Error]:', error);
+    return res.status(500).json({
+      status: 'error',
+      message: error.message || 'Error fetching user directory',
+    });
+  }
+};
+
+// @desc    Get list of unique departments
+// @route   GET /api/users/departments
+// @access  Private (JWT Protected)
+const getDepartments = async (req, res) => {
+  try {
+    const departments = await User.distinct('department', {
+      department: { $nin: ['', null] },
+    });
+
+    return res.status(200).json({
+      status: 'success',
+      results: departments.length,
+      departments: departments.filter(Boolean).sort(),
+    });
+  } catch (error) {
+    console.error('[Get Departments Error]:', error);
+    return res.status(500).json({
+      status: 'error',
+      message: error.message || 'Error fetching departments',
+    });
+  }
+};
+
+// @desc    Search users by name, email, or job title
+// @route   GET /api/users/search
+// @access  Private (JWT Protected)
 const searchUsers = async (req, res) => {
   try {
     const query = req.query.q ? req.query.q.trim() : '';
@@ -20,10 +126,12 @@ const searchUsers = async (req, res) => {
       $or: [
         { name: { $regex: sanitizedQuery, $options: 'i' } },
         { email: { $regex: sanitizedQuery, $options: 'i' } },
+        { jobTitle: { $regex: sanitizedQuery, $options: 'i' } },
+        { department: { $regex: sanitizedQuery, $options: 'i' } },
       ],
     })
-      .select('_id name email profileImage isOnline lastSeen createdAt')
-      .limit(20);
+      .select(USER_DIRECTORY_FIELDS)
+      .limit(30);
 
     return res.status(200).json({
       status: 'success',
@@ -46,9 +154,7 @@ const getUserProfile = async (req, res) => {
   try {
     const { id } = req.params;
 
-    const user = await User.findById(id).select(
-      '_id name email profileImage isOnline lastSeen createdAt'
-    );
+    const user = await User.findById(id).select(USER_DIRECTORY_FIELDS);
 
     if (!user) {
       return res.status(404).json({
@@ -57,9 +163,24 @@ const getUserProfile = async (req, res) => {
       });
     }
 
+    // Attach role if member of current user's organization
+    let orgRole = null;
+    if (req.user.currentOrganization) {
+      const org = await Organization.findById(req.user.currentOrganization);
+      if (org) {
+        const membership = org.members.find((m) => m.user.toString() === id.toString());
+        if (membership) {
+          orgRole = membership.role;
+        }
+      }
+    }
+
     return res.status(200).json({
       status: 'success',
-      user,
+      user: {
+        ...user.toObject(),
+        orgRole,
+      },
     });
   } catch (error) {
     console.error('[Get Profile Error]:', error);
@@ -75,7 +196,18 @@ const getUserProfile = async (req, res) => {
 // @access  Private (JWT Protected)
 const updateProfile = async (req, res) => {
   try {
-    const { name, profileImage } = req.body;
+    const {
+      name,
+      profileImage,
+      jobTitle,
+      department,
+      bio,
+      phone,
+      statusMessage,
+      statusEmoji,
+      presenceStatus,
+    } = req.body;
+
     const user = await User.findById(req.user._id);
 
     if (!user) {
@@ -88,9 +220,29 @@ const updateProfile = async (req, res) => {
     if (name && typeof name === 'string' && name.trim().length >= 2) {
       user.name = name.trim();
     }
-
     if (profileImage !== undefined) {
       user.profileImage = typeof profileImage === 'string' ? profileImage.trim() : '';
+    }
+    if (jobTitle !== undefined) {
+      user.jobTitle = typeof jobTitle === 'string' ? jobTitle.trim() : '';
+    }
+    if (department !== undefined) {
+      user.department = typeof department === 'string' ? department.trim() : '';
+    }
+    if (bio !== undefined) {
+      user.bio = typeof bio === 'string' ? bio.trim() : '';
+    }
+    if (phone !== undefined) {
+      user.phone = typeof phone === 'string' ? phone.trim() : '';
+    }
+    if (statusMessage !== undefined) {
+      user.statusMessage = typeof statusMessage === 'string' ? statusMessage.trim() : '';
+    }
+    if (statusEmoji !== undefined) {
+      user.statusEmoji = typeof statusEmoji === 'string' ? statusEmoji.trim() : '';
+    }
+    if (presenceStatus && ['available', 'busy', 'away', 'offline'].includes(presenceStatus)) {
+      user.presenceStatus = presenceStatus;
     }
 
     const updatedUser = await user.save();
@@ -103,8 +255,16 @@ const updateProfile = async (req, res) => {
         name: updatedUser.name,
         email: updatedUser.email,
         profileImage: updatedUser.profileImage,
+        jobTitle: updatedUser.jobTitle,
+        department: updatedUser.department,
+        bio: updatedUser.bio,
+        phone: updatedUser.phone,
+        statusMessage: updatedUser.statusMessage,
+        statusEmoji: updatedUser.statusEmoji,
+        presenceStatus: updatedUser.presenceStatus,
         isOnline: updatedUser.isOnline,
         lastSeen: updatedUser.lastSeen,
+        currentOrganization: updatedUser.currentOrganization,
         createdAt: updatedUser.createdAt,
         updatedAt: updatedUser.updatedAt,
       },
@@ -124,9 +284,9 @@ const updateProfile = async (req, res) => {
 const getAllUsers = async (req, res) => {
   try {
     const users = await User.find({ _id: { $ne: req.user._id } })
-      .select('_id name email profileImage isOnline lastSeen createdAt')
+      .select(USER_DIRECTORY_FIELDS)
       .sort({ name: 1 })
-      .limit(50);
+      .limit(100);
 
     return res.status(200).json({
       status: 'success',
@@ -258,8 +418,14 @@ const uploadAvatar = async (req, res) => {
         name: updatedUser.name,
         email: updatedUser.email,
         profileImage: updatedUser.profileImage,
+        jobTitle: updatedUser.jobTitle,
+        department: updatedUser.department,
+        statusMessage: updatedUser.statusMessage,
+        statusEmoji: updatedUser.statusEmoji,
+        presenceStatus: updatedUser.presenceStatus,
         isOnline: updatedUser.isOnline,
         lastSeen: updatedUser.lastSeen,
+        currentOrganization: updatedUser.currentOrganization,
         createdAt: updatedUser.createdAt,
         updatedAt: updatedUser.updatedAt,
       },
@@ -297,8 +463,14 @@ const removeAvatar = async (req, res) => {
         name: updatedUser.name,
         email: updatedUser.email,
         profileImage: '',
+        jobTitle: updatedUser.jobTitle,
+        department: updatedUser.department,
+        statusMessage: updatedUser.statusMessage,
+        statusEmoji: updatedUser.statusEmoji,
+        presenceStatus: updatedUser.presenceStatus,
         isOnline: updatedUser.isOnline,
         lastSeen: updatedUser.lastSeen,
+        currentOrganization: updatedUser.currentOrganization,
         createdAt: updatedUser.createdAt,
         updatedAt: updatedUser.updatedAt,
       },
@@ -313,6 +485,8 @@ const removeAvatar = async (req, res) => {
 };
 
 module.exports = {
+  getUserDirectory,
+  getDepartments,
   searchUsers,
   getUserProfile,
   updateProfile,

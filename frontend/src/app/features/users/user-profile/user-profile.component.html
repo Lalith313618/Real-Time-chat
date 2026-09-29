@@ -153,6 +153,102 @@
           </div>
         </div>
 
+        <!-- Workplace Role & Department -->
+        <div class="form-row-2">
+          <div class="form-group">
+            <label for="jobTitle" class="form-label">Job Title</label>
+            <div class="input-wrapper">
+              <input
+                id="jobTitle"
+                type="text"
+                [ngModel]="jobTitleInput()"
+                (ngModelChange)="jobTitleInput.set($event)"
+                name="jobTitle"
+                class="form-input"
+                placeholder="e.g. Lead Software Engineer"
+              />
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="department" class="form-label">Department</label>
+            <div class="input-wrapper">
+              <input
+                id="department"
+                type="text"
+                [ngModel]="departmentInput()"
+                (ngModelChange)="departmentInput.set($event)"
+                name="department"
+                class="form-input"
+                placeholder="e.g. Engineering, Product, HR"
+              />
+            </div>
+          </div>
+        </div>
+
+        <!-- Workplace Status & Presence -->
+        <div class="form-row-2">
+          <div class="form-group">
+            <label for="statusMsg" class="form-label">Workplace Status Message</label>
+            <div class="input-wrapper">
+              <input
+                id="statusMsg"
+                type="text"
+                [ngModel]="statusMessageInput()"
+                (ngModelChange)="statusMessageInput.set($event)"
+                name="statusMessage"
+                class="form-input"
+                placeholder="e.g. In deep focus sprint / Working remotely"
+              />
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="presenceSelect" class="form-label">Availability / Presence</label>
+            <select
+              id="presenceSelect"
+              class="form-input"
+              [ngModel]="presenceStatusInput()"
+              (ngModelChange)="presenceStatusInput.set($event)"
+              name="presenceStatus"
+            >
+              <option value="available">🟢 Available</option>
+              <option value="busy">🔴 Busy</option>
+              <option value="away">🟡 Away</option>
+              <option value="offline">⚪ Appear Offline</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Phone & Bio -->
+        <div class="form-group">
+          <label for="phoneNumber" class="form-label">Contact Phone (Optional)</label>
+          <div class="input-wrapper">
+            <input
+              id="phoneNumber"
+              type="tel"
+              [ngModel]="phoneInput()"
+              (ngModelChange)="phoneInput.set($event)"
+              name="phone"
+              class="form-input"
+              placeholder="+1 (555) 012-3456"
+            />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="userBio" class="form-label">About / Bio</label>
+          <textarea
+            id="userBio"
+            class="form-input"
+            rows="3"
+            [ngModel]="bioInput()"
+            (ngModelChange)="bioInput.set($event)"
+            name="bio"
+            placeholder="Share your focus areas, projects, or background with the team..."
+          ></textarea>
+        </div>
+
         <!-- Profile Image Upload Box -->
         <div class="form-group avatar-upload-group">
           <div class="label-with-hint">

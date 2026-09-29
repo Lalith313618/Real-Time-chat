@@ -5,7 +5,17 @@ const messageSchema = new mongoose.Schema(
     conversationId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Conversation',
-      required: [true, 'conversationId is required'],
+      required: function () {
+        return !this.channelId;
+      },
+      index: true,
+    },
+    channelId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Channel',
+      required: function () {
+        return !this.conversationId;
+      },
       index: true,
     },
     sender: {
@@ -65,14 +75,58 @@ const messageSchema = new mongoose.Schema(
       ref: 'Message',
       default: null,
     },
+    parentMessageId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Message',
+      default: null,
+      index: true,
+    },
+    threadCount: {
+      type: Number,
+      default: 0,
+    },
+    threadLastReplyAt: {
+      type: Date,
+      default: null,
+    },
+    threadParticipants: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',
+      },
+    ],
+    reactions: [
+      {
+        emoji: {
+          type: String,
+          required: true,
+          trim: true,
+        },
+        users: [
+          {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'User',
+          },
+        ],
+      },
+    ],
+    mentions: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',
+      },
+    ],
   },
   {
     timestamps: true,
   }
 );
 
-// Compound index to quickly fetch paginated message history of a conversation
+// Compound index to quickly fetch paginated message history of a conversation or channel
 messageSchema.index({ conversationId: 1, createdAt: -1 });
+messageSchema.index({ channelId: 1, createdAt: -1 });
+messageSchema.index({ parentMessageId: 1, createdAt: 1 });
+messageSchema.index({ mentions: 1, createdAt: -1 });
 
 // TTL index: automatically expire and purge messages after retention window (default 30 days)
 const ttlSeconds = process.env.MESSAGE_TTL_SECONDS

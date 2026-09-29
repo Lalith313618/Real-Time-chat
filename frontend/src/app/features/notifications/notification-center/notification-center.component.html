@@ -1,0 +1,168 @@
+<div class="notifications-page-layout">
+  <div class="notifications-card glass-card">
+    <header class="notif-header">
+      <div class="notif-header-left">
+        <div class="notif-header-icon">🔔</div>
+        <div>
+          <h1 class="notif-title">Activity & Notifications</h1>
+          <p class="notif-subtitle">
+            Mentions, task assignments, thread replies, and workplace updates
+          </p>
+        </div>
+        <span *ngIf="notifService.unreadCount() > 0" class="unread-badge-pill">
+          {{ notifService.unreadCount() }} new
+        </span>
+      </div>
+
+      <div class="notif-header-actions">
+        <button
+          type="button"
+          class="btn-text-action"
+          (click)="markAllAsRead()"
+          [disabled]="notifService.unreadCount() === 0"
+          title="Mark all as read"
+        >
+          ✓ Mark all read
+        </button>
+        <button
+          type="button"
+          class="btn-text-action danger"
+          (click)="clearAll()"
+          [disabled]="notifService.notifications().length === 0"
+          title="Clear all notifications"
+        >
+          🗑️ Clear all
+        </button>
+      </div>
+    </header>
+    <nav class="notif-filter-bar">
+      <button
+        type="button"
+        class="filter-tab"
+        [class.active]="notifService.activeFilter() === 'all'"
+        (click)="setFilter('all')"
+      >
+        All ({{ notifService.notifications().length }})
+      </button>
+      <button
+        type="button"
+        class="filter-tab"
+        [class.active]="notifService.activeFilter() === 'unread'"
+        (click)="setFilter('unread')"
+      >
+        Unread ({{ notifService.unreadCount() }})
+      </button>
+      <button
+        type="button"
+        class="filter-tab"
+        [class.active]="notifService.activeFilter() === 'MENTION'"
+        (click)="setFilter('MENTION')"
+      >
+        📣 Mentions
+      </button>
+      <button
+        type="button"
+        class="filter-tab"
+        [class.active]="notifService.activeFilter() === 'TASK'"
+        (click)="setFilter('TASK')"
+      >
+        📋 Tasks
+      </button>
+      <button
+        type="button"
+        class="filter-tab"
+        [class.active]="notifService.activeFilter() === 'REPLY'"
+        (click)="setFilter('REPLY')"
+      >
+        💬 Replies
+      </button>
+      <button
+        type="button"
+        class="filter-tab"
+        [class.active]="notifService.activeFilter() === 'REACTION'"
+        (click)="setFilter('REACTION')"
+      >
+        😀 Reactions
+      </button>
+    </nav>
+
+    <div class="notif-feed-viewport">
+      <div *ngIf="notifService.isLoading()" class="notif-loading-state">
+        <div class="spinner"></div>
+        <span>Loading notifications...</span>
+      </div>
+
+      <div
+        *ngIf="!notifService.isLoading() && notifService.filteredNotifications().length === 0"
+        class="notif-empty-state"
+      >
+        <div class="empty-icon">🎉</div>
+        <h2 class="empty-title">All caught up!</h2>
+        <p class="empty-desc">
+          No notifications match your current filter. You're up to date with your team.
+        </p>
+      </div>
+      <div
+        *ngIf="!notifService.isLoading() && notifService.filteredNotifications().length > 0"
+        class="notif-list"
+      >
+        <div
+          *ngFor="let notif of notifService.filteredNotifications()"
+          class="notif-item-card"
+          [class.unread]="!notif.isRead"
+          (click)="onNotificationClick(notif)"
+        >
+         
+          <div class="notif-type-badge" [class]="notif.type.toLowerCase()">
+            {{ notifService.getNotificationIcon(notif.type) }}
+          </div>
+
+          <div class="notif-avatar-box">
+            <ng-container *ngIf="notif.sender && typeof notif.sender === 'object'; else fallbackAvatar">
+              <img
+                *ngIf="notif.sender.profileImage"
+                [src]="notif.sender.profileImage | mediaUrl"
+                [alt]="notif.sender.name"
+                class="sender-avatar-img"
+              />
+              <div *ngIf="!notif.sender.profileImage" class="sender-avatar-fallback">
+                {{ notif.sender.name.charAt(0).toUpperCase() }}
+              </div>
+            </ng-container>
+            <ng-template #fallbackAvatar>
+              <div class="sender-avatar-fallback">💬</div>
+            </ng-template>
+          </div>
+
+          
+          <div class="notif-body-col">
+            <div class="notif-title-row">
+              <span class="notif-title-text">{{ notif.title }}</span>
+              <span class="notif-time">{{ notif.createdAt | date:'shortTime' }} &bull; {{ notif.createdAt | date:'MMM d' }}</span>
+            </div>
+
+            <p *ngIf="notif.content" class="notif-content-snippet">{{ notif.content }}</p>
+
+            <div class="notif-meta-tags" *ngIf="notif.metadata">
+              <span *ngIf="notif.metadata.channelName" class="meta-tag">#{{ notif.metadata.channelName }}</span>
+              <span *ngIf="notif.metadata.teamName" class="meta-tag">{{ notif.metadata.teamName }}</span>
+              <span *ngIf="notif.metadata.emoji" class="meta-tag">{{ notif.metadata.emoji }}</span>
+            </div>
+          </div>
+
+          <div class="notif-action-col">
+            <span *ngIf="!notif.isRead" class="unread-dot" title="Unread notification"></span>
+            <button
+              type="button"
+              class="btn-delete-notif"
+              (click)="deleteNotification($event, notif)"
+              title="Dismiss notification"
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,493 @@
+<div class="org-container glass-card">
+  <div *ngIf="actionFeedback() as feedback" class="alert-banner" [class.success]="feedback.type === 'success'" [class.error]="feedback.type === 'error'">
+    <span class="alert-icon">{{ feedback.type === 'success' ? '✓' : '⚠️' }}</span>
+    <span class="alert-text">{{ feedback.text }}</span>
+    <button (click)="actionFeedback.set(null)" class="alert-close">×</button>
+  </div>
+
+  <header class="org-header">
+    <div class="header-main">
+      <div class="org-identity" *ngIf="orgService.currentOrganization() as currentOrg; else noCurrentOrg">
+        <div class="org-logo-wrapper">
+          <img *ngIf="currentOrg.logo" [src]="currentOrg.logo | mediaUrl" alt="Logo" class="org-logo" />
+          <div *ngIf="!currentOrg.logo" class="org-logo-fallback">
+            {{ currentOrg.name.charAt(0).toUpperCase() }}
+          </div>
+        </div>
+        <div class="org-details">
+          <div class="title-row">
+            <h1 class="org-title">{{ currentOrg.name }}</h1>
+            <span class="role-badge" [attr.data-role]="orgService.myRole()">
+              {{ orgService.myRole() || 'MEMBER' }}
+            </span>
+          </div>
+          <p class="org-desc" *ngIf="currentOrg.description">{{ currentOrg.description }}</p>
+          <div class="org-meta">
+            <span>👥 {{ currentOrg.members.length }} Members</span>
+            <span class="bullet">•</span>
+            <span>Created {{ currentOrg.createdAt | date: 'mediumDate' }}</span>
+            <span class="bullet" *ngIf="currentOrg.inviteCode">•</span>
+            <span class="invite-code-pill" *ngIf="currentOrg.inviteCode" (click)="copyInviteCode(currentOrg.inviteCode)" title="Click to copy invite code">
+              Invite Code: <strong>{{ currentOrg.inviteCode }}</strong> 📋
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <ng-template #noCurrentOrg>
+        <div class="org-identity empty-identity">
+          <div class="org-logo-fallback empty">🏢</div>
+          <div class="org-details">
+            <h1 class="org-title">No Workspace Selected</h1>
+            <p class="org-desc">Select an existing organization or create a new workplace to get started.</p>
+          </div>
+        </div>
+      </ng-template>
+
+      <div class="header-actions">
+        <div class="workspace-picker" *ngIf="orgService.organizations().length > 0">
+          <label class="picker-label">Active Workspace:</label>
+          <select
+            class="org-select"
+            [ngModel]="orgService.currentOrganization()?._id"
+            (ngModelChange)="selectOrganization($event)"
+          >
+            <option *ngFor="let org of orgService.organizations()" [value]="org._id">
+              {{ org.name }} ({{ org.myRole }})
+            </option>
+          </select>
+        </div>
+
+        <button (click)="openCreateModal()" class="btn btn-primary btn-sm">
+          <span>+ New Workspace</span>
+        </button>
+      </div>
+    </div>
+
+    <nav class="org-tabs" *ngIf="orgService.currentOrganization()">
+      <button
+        class="tab-btn"
+        [class.active]="activeTab() === 'members'"
+        (click)="activeTab.set('members')"
+      >
+        <span>👥 Members Directory</span>
+        <span class="tab-count">{{ allMembers().length }}</span>
+      </button>
+
+      <button
+        *ngIf="orgService.isOwnerOrAdmin()"
+        class="tab-btn"
+        [class.active]="activeTab() === 'settings'"
+        (click)="activeTab.set('settings'); initSettingsForm()"
+      >
+        <span>⚙️ Workspace Settings</span>
+      </button>
+    </nav>
+  </header>
+
+  <main class="org-content" *ngIf="orgService.currentOrganization() as currentOrg; else emptyState">
+
+    <section *ngIf="activeTab() === 'members'" class="members-view">
+      <div class="stats-ribbon">
+        <div class="stat-card">
+          <span class="stat-num">{{ stats().total }}</span>
+          <span class="stat-label">Total Members</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-num">{{ stats().owners + stats().admins }}</span>
+          <span class="stat-label">Owners & Admins</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-num">{{ stats().managers }}</span>
+          <span class="stat-label">Managers</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-num">{{ stats().members }}</span>
+          <span class="stat-label">Staff Members</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-num">{{ stats().guests }}</span>
+          <span class="stat-label">Guests</span>
+        </div>
+      </div>
+
+      <div class="members-toolbar">
+        <div class="search-box">
+          <span class="search-icon">🔍</span>
+          <input
+            type="text"
+            placeholder="Search members by name or email..."
+            [ngModel]="memberSearchQuery()"
+            (ngModelChange)="memberSearchQuery.set($event)"
+            class="search-input"
+          />
+          <button *ngIf="memberSearchQuery()" (click)="memberSearchQuery.set('')" class="clear-btn">×</button>
+        </div>
+
+        <div class="filter-roles">
+          <button
+            class="filter-pill"
+            [class.active]="roleFilter() === 'ALL'"
+            (click)="roleFilter.set('ALL')"
+          >
+            All ({{ stats().total }})
+          </button>
+          <button
+            class="filter-pill"
+            [class.active]="roleFilter() === 'OWNER'"
+            (click)="roleFilter.set('OWNER')"
+          >
+            Owners ({{ stats().owners }})
+          </button>
+          <button
+            class="filter-pill"
+            [class.active]="roleFilter() === 'ADMIN'"
+            (click)="roleFilter.set('ADMIN')"
+          >
+            Admins ({{ stats().admins }})
+          </button>
+          <button
+            class="filter-pill"
+            [class.active]="roleFilter() === 'MANAGER'"
+            (click)="roleFilter.set('MANAGER')"
+          >
+            Managers ({{ stats().managers }})
+          </button>
+          <button
+            class="filter-pill"
+            [class.active]="roleFilter() === 'MEMBER'"
+            (click)="roleFilter.set('MEMBER')"
+          >
+            Members ({{ stats().members }})
+          </button>
+          <button
+            class="filter-pill"
+            [class.active]="roleFilter() === 'GUEST'"
+            (click)="roleFilter.set('GUEST')"
+          >
+            Guests ({{ stats().guests }})
+          </button>
+        </div>
+
+        <div class="toolbar-actions" *ngIf="orgService.canManageMembers()">
+          <button (click)="openInviteModal()" class="btn btn-primary btn-sm invite-btn">
+            <span>+ Invite Member</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="table-card">
+        <table class="members-table">
+          <thead>
+            <tr>
+              <th>Member</th>
+              <th>Email</th>
+              <th>Role</th>
+              <th>Status</th>
+              <th>Joined Date</th>
+              <th class="text-right">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let member of filteredMembers()" class="member-row">
+              <td>
+                <div class="member-info-cell">
+                  <div class="avatar-wrap">
+                    <img
+                      *ngIf="member.user.profileImage"
+                      [src]="member.user.profileImage | mediaUrl"
+                      alt="Avatar"
+                      class="member-avatar"
+                    />
+                    <div *ngIf="!member.user.profileImage" class="member-avatar-fallback">
+                      {{ member.user.name?.charAt(0)?.toUpperCase() || '?' }}
+                    </div>
+                    <span class="presence-dot" [class.online]="member.user.isOnline"></span>
+                  </div>
+                  <div class="name-col">
+                    <span class="member-name">{{ member.user.name }}</span>
+                    <span *ngIf="authService.currentUser()?._id === member.user._id" class="self-tag">
+                      (You)
+                    </span>
+                  </div>
+                </div>
+              </td>
+
+              <td class="email-cell">{{ member.user.email }}</td>
+
+              <td>
+                <div class="role-cell">
+                  <select
+                    *ngIf="canEditRole(member); else staticRole"
+                    class="role-select"
+                    [attr.data-role]="member.role"
+                    [ngModel]="member.role"
+                    (ngModelChange)="onRoleChange(member, $event)"
+                  >
+                    <option *ngFor="let r of availableRoles" [value]="r">{{ r }}</option>
+                  </select>
+
+                  <ng-template #staticRole>
+                    <span class="role-badge" [attr.data-role]="member.role">
+                      {{ member.role }}
+                    </span>
+                  </ng-template>
+                </div>
+              </td>
+
+              <td>
+                <span class="status-indicator-text" [class.online]="member.user.isOnline">
+                  <span class="dot"></span>
+                  {{ member.user.isOnline ? 'Online' : 'Offline' }}
+                </span>
+              </td>
+
+              <td class="date-cell">{{ member.joinedAt | date: 'mediumDate' }}</td>
+
+              <td class="text-right">
+                <button
+                  *ngIf="canRemoveMember(member)"
+                  (click)="confirmRemoveMember(member)"
+                  class="btn-icon-danger"
+                  [title]="authService.currentUser()?._id === member.user._id ? 'Leave Workspace' : 'Remove Member'"
+                >
+                  {{ authService.currentUser()?._id === member.user._id ? 'Leave' : 'Remove' }}
+                </button>
+              </td>
+            </tr>
+
+            <tr *ngIf="filteredMembers().length === 0">
+              <td colspan="6" class="empty-table-cell">
+                <div class="empty-feed">
+                  <span class="empty-icon">👥</span>
+                  <p>No members found matching your search.</p>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section *ngIf="activeTab() === 'settings' && orgService.isOwnerOrAdmin()" class="settings-view">
+      <div class="settings-card">
+        <h2 class="section-title">General Workspace Settings</h2>
+        <p class="section-desc">Manage the organization profile, branding, and details visible to members.</p>
+
+        <div *ngIf="settingsMessage() as msg" class="form-feedback" [class.success]="msg.type === 'success'" [class.error]="msg.type === 'error'">
+          {{ msg.text }}
+        </div>
+
+        <form (ngSubmit)="saveSettings()" class="settings-form">
+          <div class="form-group">
+            <label class="form-label">Workspace Name *</label>
+            <input
+              type="text"
+              class="form-input"
+              [ngModel]="settingsName()"
+              (ngModelChange)="settingsName.set($event)"
+              name="settingsName"
+              placeholder="e.g. Acme Corporation"
+              required
+            />
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Description</label>
+            <textarea
+              class="form-textarea"
+              rows="3"
+              [ngModel]="settingsDesc()"
+              (ngModelChange)="settingsDesc.set($event)"
+              name="settingsDesc"
+              placeholder="Brief description of the organization and team mission..."
+            ></textarea>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Workspace Logo</label>
+            <div class="logo-upload-wrap">
+              <div class="current-logo-preview">
+                <img *ngIf="currentOrg.logo" [src]="currentOrg.logo | mediaUrl" alt="Logo preview" class="logo-preview-img" />
+                <div *ngIf="!currentOrg.logo" class="logo-preview-placeholder">
+                  {{ currentOrg.name.charAt(0).toUpperCase() }}
+                </div>
+              </div>
+              <div class="upload-controls">
+                <input
+                  type="file"
+                  id="logoFileInput"
+                  accept="image/png,image/jpeg,image/webp,image/svg+xml"
+                  (change)="onLogoSelected($event)"
+                  class="file-input-hidden"
+                />
+                <label for="logoFileInput" class="btn btn-secondary btn-sm" [class.loading]="logoUploading()">
+                  {{ logoUploading() ? 'Uploading...' : 'Upload New Logo' }}
+                </label>
+                <span class="upload-hint">Recommended: square PNG, SVG, or WEBP up to 5MB</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Workspace Invite Code</label>
+            <div class="code-box">
+              <span class="code-text">{{ currentOrg.inviteCode }}</span>
+              <button type="button" (click)="copyInviteCode(currentOrg.inviteCode)" class="btn btn-secondary btn-sm">
+                Copy Code
+              </button>
+            </div>
+            <span class="upload-hint">Share this code with teammates so they can join this workspace directly.</span>
+          </div>
+
+          <div class="form-actions">
+            <button type="submit" class="btn btn-primary" [disabled]="isSavingSettings()">
+              {{ isSavingSettings() ? 'Saving...' : 'Save Changes' }}
+            </button>
+          </div>
+        </form>
+      </div>
+    </section>
+  </main>
+
+  <ng-template #emptyState>
+    <div class="empty-state-view">
+      <div class="empty-icon-large">🏢</div>
+      <h2 class="empty-title">Welcome to Teams Workplace!</h2>
+      <p class="empty-subtitle">
+        You are not currently part of any workspace. Create your organization to start collaborating with teams, channels, and projects.
+      </p>
+      <button (click)="openCreateModal()" class="btn btn-primary btn-lg">
+        + Create Your First Workspace
+      </button>
+    </div>
+  </ng-template>
+</div>
+
+<div *ngIf="isCreateModalOpen()" class="modal-backdrop" (click)="closeCreateModal()">
+  <div class="modal-card" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h3 class="modal-title">Create New Workspace</h3>
+      <button class="modal-close-btn" (click)="closeCreateModal()">×</button>
+    </div>
+
+    <form (ngSubmit)="submitCreateOrg()" class="modal-form">
+      <div *ngIf="createError()" class="form-feedback error">
+        {{ createError() }}
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Organization Name *</label>
+        <input
+          type="text"
+          class="form-input"
+          [ngModel]="newOrgName()"
+          (ngModelChange)="newOrgName.set($event)"
+          name="newOrgName"
+          placeholder="e.g. Acme Corp, Engineering Hub"
+          required
+          autofocus
+        />
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Description (optional)</label>
+        <textarea
+          class="form-textarea"
+          rows="3"
+          [ngModel]="newOrgDesc()"
+          (ngModelChange)="newOrgDesc.set($event)"
+          name="newOrgDesc"
+          placeholder="What is this workspace for?"
+        ></textarea>
+      </div>
+
+      <div class="modal-actions">
+        <button type="button" class="btn btn-secondary" (click)="closeCreateModal()">
+          Cancel
+        </button>
+        <button type="submit" class="btn btn-primary" [disabled]="isCreating() || !newOrgName().trim()">
+          {{ isCreating() ? 'Creating...' : 'Create Workspace' }}
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div *ngIf="isInviteModalOpen()" class="modal-backdrop" (click)="closeInviteModal()">
+  <div class="modal-card" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h3 class="modal-title">Invite Member to {{ orgService.currentOrganization()?.name }}</h3>
+      <button class="modal-close-btn" (click)="closeInviteModal()">×</button>
+    </div>
+
+    <form (ngSubmit)="submitInvite()" class="modal-form">
+      <div *ngIf="inviteError()" class="form-feedback error">{{ inviteError() }}</div>
+      <div *ngIf="inviteSuccess()" class="form-feedback success">{{ inviteSuccess() }}</div>
+
+      <div class="form-group relative">
+        <label class="form-label">Find Teammate by Name or Email *</label>
+        <input
+          type="text"
+          class="form-input"
+          [ngModel]="inviteQuery()"
+          (ngModelChange)="onInviteQueryChange($event)"
+          name="inviteQuery"
+          placeholder="Type name or email address..."
+          required
+          autocomplete="off"
+        />
+
+        <div class="search-suggestions" *ngIf="foundUsers().length > 0">
+          <div
+            *ngFor="let user of foundUsers()"
+            (click)="selectUserToInvite(user)"
+            class="suggestion-item"
+          >
+            <div class="suggestion-avatar">
+              <img *ngIf="user.profileImage" [src]="user.profileImage | mediaUrl" alt="Avatar" class="avatar-mini" />
+              <span *ngIf="!user.profileImage" class="avatar-mini-fallback">{{ user.name.charAt(0).toUpperCase() }}</span>
+            </div>
+            <div class="suggestion-info">
+              <span class="suggestion-name">{{ user.name }}</span>
+              <span class="suggestion-email">{{ user.email }}</span>
+            </div>
+          </div>
+        </div>
+
+        <div *ngIf="selectedUserToInvite() as user" class="selected-chip">
+          <span>Selected: <strong>{{ user.name }}</strong> ({{ user.email }})</span>
+          <button type="button" (click)="selectedUserToInvite.set(null); inviteQuery.set('')" class="chip-remove">×</button>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Organization Role</label>
+        <select
+          class="form-select"
+          [ngModel]="inviteRole()"
+          (ngModelChange)="inviteRole.set($event)"
+          name="inviteRole"
+        >
+          <option value="MEMBER">MEMBER — Standard access to teams & channels</option>
+          <option value="MANAGER">MANAGER — Can manage tasks, invite teammates, lead teams</option>
+          <option value="ADMIN" *ngIf="orgService.isOwnerOrAdmin()">ADMIN — Workspace management & administration</option>
+          <option value="GUEST">GUEST — Restricted access to designated channels only</option>
+        </select>
+      </div>
+
+      <div class="modal-actions">
+        <button type="button" class="btn btn-secondary" (click)="closeInviteModal()">
+          Cancel
+        </button>
+        <button
+          type="submit"
+          class="btn btn-primary"
+          [disabled]="isInviting() || (!selectedUserToInvite() && !inviteQuery().trim())"
+        >
+          {{ isInviting() ? 'Adding...' : 'Add to Workspace' }}
+        </button>
+      </div>
+    </form>
+  </div>
+</div>

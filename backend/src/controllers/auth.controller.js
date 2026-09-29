@@ -1,14 +1,8 @@
 const User = require('../models/user.model');
 const { generateToken } = require('../config/jwt');
-
-// @desc    Register a new user
-// @route   POST /api/auth/register
-// @access  Public
 const register = async (req, res) => {
   try {
     const { name, email, password, profileImage } = req.body;
-
-    // Check if user already exists
     const userExists = await User.findOne({ email: email.toLowerCase().trim() });
     if (userExists) {
       return res.status(400).json({
@@ -16,8 +10,6 @@ const register = async (req, res) => {
         message: 'An account with this email already exists',
       });
     }
-
-    // Create new user (password is automatically hashed by Mongoose pre-save hook)
     const user = await User.create({
       name: name.trim(),
       email: email.toLowerCase().trim(),
@@ -26,8 +18,6 @@ const register = async (req, res) => {
       isOnline: true,
       lastSeen: new Date(),
     });
-
-    // Generate JWT token
     const token = generateToken(user._id);
 
     return res.status(201).json({
@@ -41,6 +31,7 @@ const register = async (req, res) => {
         profileImage: user.profileImage,
         isOnline: user.isOnline,
         lastSeen: user.lastSeen,
+        currentOrganization: user.currentOrganization || null,
         createdAt: user.createdAt,
       },
     });
@@ -52,15 +43,9 @@ const register = async (req, res) => {
     });
   }
 };
-
-// @desc    Authenticate user & get token
-// @route   POST /api/auth/login
-// @access  Public
 const login = async (req, res) => {
   try {
     const { email, password } = req.body;
-
-    // Find user by email and explicitly select password
     const user = await User.findOne({ email: email.toLowerCase().trim() }).select('+password');
 
     if (!user || !(await user.matchPassword(password))) {
@@ -69,13 +54,9 @@ const login = async (req, res) => {
         message: 'Invalid email or password credentials',
       });
     }
-
-    // Update online status
     user.isOnline = true;
     user.lastSeen = new Date();
     await user.save({ validateBeforeSave: false });
-
-    // Generate JWT token
     const token = generateToken(user._id);
 
     return res.status(200).json({
@@ -89,6 +70,7 @@ const login = async (req, res) => {
         profileImage: user.profileImage,
         isOnline: user.isOnline,
         lastSeen: user.lastSeen,
+        currentOrganization: user.currentOrganization || null,
         createdAt: user.createdAt,
       },
     });
@@ -100,10 +82,6 @@ const login = async (req, res) => {
     });
   }
 };
-
-// @desc    Get currently logged in user profile
-// @route   GET /api/auth/me
-// @access  Private (Protected by JWT)
 const getMe = async (req, res) => {
   try {
     const user = await User.findById(req.user._id);
@@ -123,6 +101,7 @@ const getMe = async (req, res) => {
         profileImage: user.profileImage,
         isOnline: user.isOnline,
         lastSeen: user.lastSeen,
+        currentOrganization: user.currentOrganization || null,
         createdAt: user.createdAt,
       },
     });

@@ -33,6 +33,15 @@ export class UserProfileComponent implements OnInit {
   imageUrlInput = signal<string>('');
   avatarLoadFailed = signal<boolean>(false);
 
+  // Workplace profile fields
+  jobTitleInput = signal<string>('');
+  departmentInput = signal<string>('');
+  bioInput = signal<string>('');
+  phoneInput = signal<string>('');
+  statusMessageInput = signal<string>('');
+  statusEmojiInput = signal<string>('💻');
+  presenceStatusInput = signal<'available' | 'busy' | 'away' | 'offline'>('available');
+
   // Selected file state
   selectedFile = signal<File | null>(null);
   selectedFileName = signal<string>('');
@@ -72,6 +81,13 @@ export class UserProfileComponent implements OnInit {
       this.user.set(current);
       this.nameInput.set(current.name);
       this.imageUrlInput.set(resolveMediaUrl(current.profileImage) || '');
+      this.jobTitleInput.set(current.jobTitle || '');
+      this.departmentInput.set(current.department || '');
+      this.bioInput.set(current.bio || '');
+      this.phoneInput.set(current.phone || '');
+      this.statusMessageInput.set(current.statusMessage || '');
+      this.statusEmojiInput.set(current.statusEmoji || '💻');
+      this.presenceStatusInput.set(current.presenceStatus || 'available');
       this.avatarLoadFailed.set(false);
     }
   }
@@ -435,40 +451,45 @@ export class UserProfileComponent implements OnInit {
     this.errorMessage.set(null);
 
     const file = this.selectedFile();
+    const profilePayload = {
+      name: this.nameInput().trim(),
+      jobTitle: this.jobTitleInput().trim(),
+      department: this.departmentInput().trim(),
+      bio: this.bioInput().trim(),
+      phone: this.phoneInput().trim(),
+      statusMessage: this.statusMessageInput().trim(),
+      statusEmoji: this.statusEmojiInput().trim() || '💻',
+      presenceStatus: this.presenceStatusInput(),
+    };
 
     if (file) {
       this.userService.uploadAvatar(file).subscribe({
         next: (uploadRes) => {
-          const newName = this.nameInput().trim();
-          if (newName !== uploadRes.user.name) {
-            this.userService
-              .updateProfile({
-                name: newName,
-                profileImage: uploadRes.fileUrl
-              })
-              .subscribe({
-                next: (updatedUser) => {
-                  this.finalizeSave(updatedUser);
-                },
-                error: (err) => {
-                  this.isSaving.set(false);
-                  this.errorMessage.set(err?.message || 'Failed to update name');
-                }
-              });
-          } else {
-            this.finalizeSave(uploadRes.user);
-          }
+          this.userService
+            .updateProfile({
+              ...profilePayload,
+              profileImage: uploadRes.fileUrl,
+            })
+            .subscribe({
+              next: (updatedUser) => {
+                this.finalizeSave(updatedUser);
+              },
+              error: (err) => {
+                this.isSaving.set(false);
+                this.errorMessage.set(err?.message || 'Failed to update profile details');
+              },
+            });
         },
         error: (err) => {
           this.isSaving.set(false);
           this.errorMessage.set(err?.message || 'Failed to upload profile image');
-        }
+        },
       });
     } else {
       this.userService
         .updateProfile({
-          name: this.nameInput().trim(),
-          profileImage: this.imageUrlInput().trim()
+          ...profilePayload,
+          profileImage: this.imageUrlInput().trim(),
         })
         .subscribe({
           next: (updatedUser) => {
@@ -477,7 +498,7 @@ export class UserProfileComponent implements OnInit {
           error: (err) => {
             this.isSaving.set(false);
             this.errorMessage.set(err?.message || 'Failed to update profile');
-          }
+          },
         });
     }
   }

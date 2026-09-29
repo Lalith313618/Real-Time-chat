@@ -10,6 +10,11 @@ const authRoutes = require('./src/routes/auth.routes');
 const userRoutes = require('./src/routes/user.routes');
 const conversationRoutes = require('./src/routes/conversation.routes');
 const messageRoutes = require('./src/routes/message.routes');
+const organizationRoutes = require('./src/routes/organization.routes');
+const teamRoutes = require('./src/routes/team.routes');
+const channelRoutes = require('./src/routes/channel.routes');
+const taskRoutes = require('./src/routes/task.routes');
+const notificationRoutes = require('./src/routes/notification.routes');
 const initChatSockets = require('./src/sockets/chat.socket');
 
 const app = express();
@@ -18,7 +23,6 @@ const server = http.createServer(app);
 connectDB();
 
 const isOriginAllowed = (origin, callback) => {
-  // Allow requests from mobile apps, tools, localhost, or any local network IP
   if (!origin) return callback(null, true);
   if (
     origin.includes('localhost') ||
@@ -55,6 +59,11 @@ app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/conversations', conversationRoutes);
 app.use('/api/messages', messageRoutes);
+app.use('/api/organizations', organizationRoutes);
+app.use('/api/teams', teamRoutes);
+app.use('/api/channels', channelRoutes);
+app.use('/api/tasks', taskRoutes);
+app.use('/api/notifications', notificationRoutes);
 
 app.get('/api/health', (req, res) => {
   const dbState = mongoose.connection.readyState;

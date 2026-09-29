@@ -1,8 +1,8 @@
 import { Injectable, inject } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable, map } from 'rxjs';
 import { environment } from '../../../environments/environment';
-import { User } from '../models/user.model';
+import { User, UpdateProfileDto } from '../models/user.model';
 import { resolveMediaUrl } from '../utils/media-url.util';
 
 export interface SearchUsersResponse {
@@ -16,11 +16,6 @@ export interface UserProfileResponse {
   user: User;
 }
 
-export interface UpdateProfileDto {
-  name?: string;
-  profileImage?: string;
-}
-
 export interface UploadAvatarResponse {
   status: string;
   message: string;
@@ -28,8 +23,15 @@ export interface UploadAvatarResponse {
   user: User;
 }
 
+export interface DirectoryFilterParams {
+  q?: string;
+  department?: string;
+  presence?: string;
+  orgId?: string;
+}
+
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class UserService {
   private readonly http = inject(HttpClient);
@@ -39,8 +41,28 @@ export class UserService {
     if (!user) return user;
     return {
       ...user,
-      profileImage: user.profileImage ? resolveMediaUrl(user.profileImage) : ''
+      profileImage: user.profileImage ? resolveMediaUrl(user.profileImage) : '',
     };
+  }
+
+  getUserDirectory(params?: DirectoryFilterParams): Observable<User[]> {
+    let httpParams = new HttpParams();
+    if (params?.q) httpParams = httpParams.set('q', params.q);
+    if (params?.department) httpParams = httpParams.set('department', params.department);
+    if (params?.presence) httpParams = httpParams.set('presence', params.presence);
+    if (params?.orgId) httpParams = httpParams.set('orgId', params.orgId);
+
+    return this.http
+      .get<SearchUsersResponse>(`${this.apiUrl}/directory`, { params: httpParams })
+      .pipe(map((res) => (res.users || []).map((u) => this.normalizeUser(u))));
+  }
+
+  getDepartments(): Observable<string[]> {
+    return this.http
+      .get<{ status: string; results: number; departments: string[] }>(
+        `${this.apiUrl}/departments`
+      )
+      .pipe(map((res) => res.departments || []));
   }
 
   uploadAvatar(file: File | Blob): Observable<{ user: User; fileUrl: string }> {
@@ -51,7 +73,7 @@ export class UserService {
       .pipe(
         map((res) => ({
           user: this.normalizeUser(res.user),
-          fileUrl: resolveMediaUrl(res.fileUrl)
+          fileUrl: resolveMediaUrl(res.fileUrl),
         }))
       );
   }
@@ -65,9 +87,9 @@ export class UserService {
   searchUsers(query: string): Observable<User[]> {
     return this.http
       .get<SearchUsersResponse>(`${this.apiUrl}/search`, {
-        params: { q: query }
+        params: { q: query },
       })
-      .pipe(map((res) => res.users.map((u) => this.normalizeUser(u))));
+      .pipe(map((res) => (res.users || []).map((u) => this.normalizeUser(u))));
   }
 
   getUserProfile(id: string): Observable<User> {
@@ -85,6 +107,6 @@ export class UserService {
   getAllUsers(): Observable<User[]> {
     return this.http
       .get<SearchUsersResponse>(this.apiUrl)
-      .pipe(map((res) => res.users.map((u) => this.normalizeUser(u))));
+      .pipe(map((res) => (res.users || []).map((u) => this.normalizeUser(u))));
   }
 }

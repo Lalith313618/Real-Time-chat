@@ -19,17 +19,42 @@
         </div>
         <span class="nav-label">Chat</span>
       </a>
+      <a routerLink="/notifications" class="nav-item" [class.active]="currentPath().startsWith('/notifications')">
+        <div class="nav-icon-wrap notif-nav-icon-wrap">
+          <span style="font-size: 1rem; line-height: 1;">🔔</span>
+          <span *ngIf="notifService.unreadCount() > 0" class="nav-badge-dot"></span>
+        </div>
+        <span class="nav-label">Activity</span>
+      </a>
       <a routerLink="/users/search" class="nav-item" [class.active]="currentPath().startsWith('/users/search')">
         <div class="nav-icon-wrap">
           <img src="/icons/search.svg" class="icon-img-sm" alt="Find Users" />
         </div>
         <span class="nav-label">Search</span>
       </a>
+      <a routerLink="/teams" class="nav-item" [class.active]="currentPath().startsWith('/teams')">
+        <div class="nav-icon-wrap">
+          <span style="font-size: 1rem; line-height: 1;">👥</span>
+        </div>
+        <span class="nav-label">Teams</span>
+      </a>
+      <a routerLink="/tasks" class="nav-item" [class.active]="currentPath().startsWith('/tasks')">
+        <div class="nav-icon-wrap">
+          <span style="font-size: 1rem; line-height: 1;">📋</span>
+        </div>
+        <span class="nav-label">Tasks</span>
+      </a>
       <a routerLink="/" class="nav-item" [class.active]="currentPath() === '/'">
         <div class="nav-icon-wrap">
           <img src="/icons/home.svg" class="icon-img-sm" alt="Dashboard" />
         </div>
         <span class="nav-label">Dashboard</span>
+      </a>
+      <a routerLink="/organization" class="nav-item" [class.active]="currentPath().startsWith('/organization')">
+        <div class="nav-icon-wrap">
+          <span style="font-size: 1rem; line-height: 1;">🏢</span>
+        </div>
+        <span class="nav-label">Workspaces</span>
       </a>
       <a routerLink="/users/profile" class="nav-item" [class.active]="currentPath().startsWith('/users/profile')">
         <div class="nav-icon-wrap">
@@ -63,6 +88,115 @@
       </ng-container>
 
       <ng-container *ngIf="authService.currentUser() as user">
+        <!-- Active Workspace Picker Pill -->
+        <div class="navbar-org-wrapper" *ngIf="orgService.currentOrganization() as org">
+          <button (click)="toggleOrgDropdown()" class="navbar-org-pill" title="Switch Workspace">
+            <div class="navbar-org-logo">
+              <img *ngIf="org.logo" [src]="org.logo | mediaUrl" alt="Org Logo" class="org-mini-img" />
+              <span *ngIf="!org.logo">{{ org.name.charAt(0).toUpperCase() }}</span>
+            </div>
+            <span class="navbar-org-name">{{ org.name }}</span>
+            <span class="navbar-org-role">{{ org.myRole || 'MEMBER' }}</span>
+            <span class="arrow-indicator">▾</span>
+          </button>
+
+          <!-- Dropdown menu -->
+          <div *ngIf="isOrgDropdownOpen()" class="navbar-org-dropdown">
+            <div class="org-dropdown-header">Your Workspaces</div>
+            <div class="org-dropdown-list">
+              <button
+                *ngFor="let o of orgService.organizations()"
+                (click)="switchWorkspace(o._id)"
+                class="org-dropdown-item"
+                [class.active]="o._id === org._id"
+              >
+                <div class="org-item-logo">
+                  <img *ngIf="o.logo" [src]="o.logo | mediaUrl" alt="Logo" class="org-mini-img" />
+                  <span *ngIf="!o.logo">{{ o.name.charAt(0).toUpperCase() }}</span>
+                </div>
+                <div class="org-item-info">
+                  <span class="org-item-name">{{ o.name }}</span>
+                  <span class="org-item-meta">{{ o.myRole }} • {{ o.memberCount || o.members.length }} members</span>
+                </div>
+                <span *ngIf="o._id === org._id" class="active-check">✓</span>
+              </button>
+            </div>
+            <div class="org-dropdown-footer">
+              <a routerLink="/organization" (click)="isOrgDropdownOpen.set(false)" class="dropdown-link">
+                ⚙️ Manage Workspace
+              </a>
+            </div>
+          </div>
+        </div>
+
+        <!-- Notification Bell & Quick Popover -->
+        <div class="navbar-notif-wrapper">
+          <button 
+            (click)="toggleNotifications()" 
+            class="navbar-notif-btn" 
+            [class.has-unread]="notifService.unreadCount() > 0" 
+            title="Notifications & Activity" 
+            aria-label="Notifications">
+            <span class="bell-icon">🔔</span>
+            <span *ngIf="notifService.unreadCount() > 0" class="notif-badge-pill">
+              {{ notifService.unreadCount() > 99 ? '99+' : notifService.unreadCount() }}
+            </span>
+          </button>
+
+          <!-- Popover Dropdown -->
+          <div *ngIf="notifService.isDropdownOpen()" class="navbar-notif-dropdown">
+            <div class="notif-dropdown-header">
+              <div class="notif-header-title">
+                <span class="header-text">Activity</span>
+                <span *ngIf="notifService.unreadCount() > 0" class="unread-chip">{{ notifService.unreadCount() }} unread</span>
+              </div>
+              <button 
+                *ngIf="notifService.unreadCount() > 0" 
+                (click)="markAllAsRead()" 
+                class="btn-mark-all-read" 
+                title="Mark all as read">
+                Mark all read
+              </button>
+            </div>
+
+            <div class="notif-dropdown-list">
+              <div *ngIf="notifService.isLoading()" class="notif-dropdown-loading">
+                <span class="spinner-sm"></span> Loading activity...
+              </div>
+
+              <div *ngIf="!notifService.isLoading() && notifService.notifications().length === 0" class="notif-dropdown-empty">
+                <div class="empty-icon">🔕</div>
+                <p class="empty-title">All caught up!</p>
+                <p class="empty-sub">No recent activity</p>
+              </div>
+
+              <div 
+                *ngFor="let notif of notifService.notifications() | slice:0:8" 
+                (click)="handleNotificationClick(notif)"
+                class="notif-dropdown-item" 
+                [class.unread]="!notif.isRead">
+                <div class="notif-item-icon">
+                  {{ notifService.getNotificationIcon(notif.type) }}
+                </div>
+                <div class="notif-item-content">
+                  <div class="notif-item-top">
+                    <span class="notif-item-title">{{ notif.title }}</span>
+                    <span class="notif-item-time">{{ notif.createdAt | date:'shortTime' }}</span>
+                  </div>
+                  <p class="notif-item-text">{{ notif.content }}</p>
+                </div>
+                <span *ngIf="!notif.isRead" class="item-unread-dot"></span>
+              </div>
+            </div>
+
+            <div class="notif-dropdown-footer">
+              <a routerLink="/notifications" (click)="notifService.closeDropdown()" class="notif-view-all">
+                See all activity in Notification Center &rarr;
+              </a>
+            </div>
+          </div>
+        </div>
+
         <a routerLink="/users/profile" class="user-profile-badge" title="Go to My Profile">
           <div *ngIf="!user.profileImage || navbarAvatarFailed()" class="user-avatar-circle">
             {{ user.name.charAt(0).toUpperCase() }}
@@ -88,4 +222,14 @@
       </ng-container>
     </div>
   </div>
+
+  <!-- Real-time Toast Notification Banner -->
+  <aside *ngIf="notifService.activeToast() as toast" class="navbar-toast-alert" (click)="handleNotificationClick(toast)" role="alert">
+    <div class="toast-icon">{{ notifService.getNotificationIcon(toast.type) }}</div>
+    <div class="toast-body">
+      <span class="toast-title">{{ toast.title }}</span>
+      <span class="toast-content">{{ toast.content }}</span>
+    </div>
+    <button class="toast-close" (click)="$event.stopPropagation(); notifService.dismissToast()" title="Dismiss notification">✕</button>
+  </aside>
 </header>
